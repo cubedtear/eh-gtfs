@@ -1,0 +1,22 @@
+{
+  "id": "/",
+  "name": "Euskadi Transit",
+  "short_name": "Euskadi Transit",
+  "description": "Live map and next departures for buses, trains, metro and trams in Euskadi.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3f1ec",
+  "theme_color": "#ffffff",
+  "categories": ["travel", "navigation"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Nearby stops", "url": "/?near=1", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

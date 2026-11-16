@@ -21,6 +21,12 @@ const ICONS = {
   close: P('M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'),
   route: STROKE('M4 19c4 0 3-7 8-7s4-7 8-7'),
   pin: P('M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'),
+  tune: P('M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z'),
+  info: P('M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z'),
+  globe: P('M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.08 16zm2.95-8H5.08a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z'),
+  sun: P('M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z'),
+  moon: P('M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z'),
+  search: P('M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'),
   link: P('M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z'),
   car: P('M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 12.2c-2.1 0-3.9-1.1-5-2.7.03-1.65 3.3-2.55 5-2.55s4.97.9 5 2.55c-1.1 1.6-2.9 2.7-5 2.7z'),
 };
@@ -28,7 +34,11 @@ const ic = (name, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill=
 
 // ───────────────────────────────────────────────────────────── state & helpers
 const MODES = ['bus', 'train', 'metro', 'tram', 'funicular', 'ferry'];
-const MODE_COLOR = { bus: '#2d6cdf', train: '#c0392b', metro: '#e8590c', tram: '#12926f', funicular: '#8e44ad', ferry: '#0b7285' };
+const CHIP_MODES = MODES.filter(m => m !== 'ferry');
+/** Read a design token from :root (the canvas map layers cannot resolve var()). */
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const MODE_COLOR = Object.fromEntries(MODES.map(m => [m, cssv('--mode-' + m)]));
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const POLL_VEHICLES_MS = 15000;
 const POLL_VIEW_MS = 20000;
 const BUS_MIN_ZOOM = 11;      // buses are hidden below this zoom unless a scope filter is active
@@ -52,6 +62,7 @@ const S = {
   alerts: [],
   linesAgency: localStorage.getItem('linesAgency') || '',
   routesCache: {},
+  mapStyle: localStorage.getItem('mapStyle') === 'detailed' ? 'detailed' : 'simple',
 };
 if (!I18N[S.lang]) S.lang = 'en';
 try {
@@ -134,20 +145,29 @@ function badge(o) {
 // ───────────────────────────────────────────────────────────── i18n
 function applyI18n() {
   document.documentElement.lang = S.lang;
-  $$('[data-i18n]').forEach(el => {
-    const badgeEl = $('.badge', el);
-    el.firstChild && el.firstChild.nodeType === 3 ? (el.firstChild.nodeValue = t(el.dataset.i18n) + ' ') : (el.textContent = t(el.dataset.i18n));
-    if (badgeEl && !el.contains(badgeEl)) el.appendChild(badgeEl);
-  });
+  $$('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   $$('[data-i18n-ph]').forEach(el => el.placeholder = t(el.dataset.i18nPh));
   $$('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); el.setAttribute('aria-label', el.title); });
 }
 
 // ───────────────────────────────────────────────────────────── map
-const map = L.map('map', { zoomControl: true, renderer: L.canvas({ tolerance: 10 }), tap: true }).setView([43.05, -2.55], 9);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · Data: <a href="https://opendata.euskadi.eus/">Open Data Euskadi</a>',
-}).addTo(map);
+const map = L.map('map', { zoomControl: false, attributionControl: false, renderer: L.canvas({ tolerance: 12 }), tap: true }).setView([43.05, -2.55], 9);
+L.control.zoom({ position: 'bottomright' }).addTo(map);   // hidden on phones: pinch instead
+L.control.attribution({ prefix: false }).addTo(map);
+let baseLayers = [];
+const OSM_CREDIT = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://opendata.euskadi.eus/">Open Data Euskadi</a>';
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+/** "Simple" is Esri's quiet gray canvas (roads and place names only); "Detailed" is the standard OpenStreetMap style. */
+function applyBasemap() {
+  baseLayers.forEach(l => map.removeLayer(l));
+  const detailed = S.mapStyle === 'detailed', k = document.documentElement.dataset.theme === 'dark' ? 'Dark' : 'Light';
+  const esri = { maxNativeZoom: 16, maxZoom: 19, attribution: OSM_CREDIT + ', Tiles © Esri' };
+  baseLayers = detailed
+    ? [L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: OSM_CREDIT })]
+    : [L.tileLayer(`${ESRI}World_${k}_Gray_Base/MapServer/tile/{z}/{y}/{x}`, esri), L.tileLayer(`${ESRI}World_${k}_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxNativeZoom: 16, maxZoom: 19 })];
+  baseLayers.forEach((l, n) => { l.addTo(map); l.setZIndex(n); });
+  $('#map').classList.toggle('osm', detailed);
+}
 const vehLayer = L.layerGroup().addTo(map);
 const stnLayer = L.layerGroup().addTo(map);
 const routeLayer = L.layerGroup().addTo(map);
@@ -165,11 +185,73 @@ function toast(msg, ms = 2500) {
   clearTimeout(toast._t); toast._t = setTimeout(() => el.hidden = true, ms);
 }
 const isMobile = () => window.innerWidth <= 800;
+
+// ── bottom sheet (phones). States: closed (handle only), half, full. Moves with transform, never height.
+const sheetEl = $('#sheet'), tabsEl = $('#tabs');
+let sheetOff = 0;
+function sheetOffsets() {
+  const h = sheetEl.offsetHeight;
+  return { closed: Math.max(0, h - 32), half: Math.max(0, h - Math.round(window.innerHeight * .42)), full: 0 };
+}
+function setSheet(state) {
+  sheetEl.dataset.state = state;
+  if (!isMobile()) { sheetEl.style.removeProperty('--off'); sheetEl.style.removeProperty('--pad'); $('#panel-body').inert = false; return; }
+  sheetOff = sheetOffsets()[state];
+  sheetEl.style.setProperty('--off', sheetOff + 'px');
+  sheetEl.style.setProperty('--pad', sheetOff + 'px');
+  $('#panel-body').inert = state === 'closed';
+}
+/** Pixels at the bottom of the screen covered by the tab bar and the visible part of the sheet. */
+function coverBottom() { return isMobile() ? tabsEl.offsetHeight + sheetEl.offsetHeight - sheetOff : 0; }
+function coverTop() { return isMobile() ? 120 : 0; }
+function expandSheet() { if (isMobile() && sheetEl.dataset.state === 'closed') setSheet('half'); }
+(function sheetDrag() {
+  const handle = $('#sheet-handle');
+  let y0 = null, off0 = 0, moved = false, lastY = 0, lastT = 0, vel = 0;
+  const cycle = () => setSheet({ closed: 'half', half: 'full', full: 'half' }[sheetEl.dataset.state]);
+  handle.addEventListener('pointerdown', e => {
+    if (!isMobile()) return;
+    handle.setPointerCapture(e.pointerId);
+    y0 = e.clientY; off0 = sheetOff; moved = false; vel = 0; lastY = e.clientY; lastT = e.timeStamp;
+    sheetEl.classList.add('dragging');
+  });
+  handle.addEventListener('pointermove', e => {
+    if (y0 === null) return;
+    const dy = e.clientY - y0;
+    if (Math.abs(dy) > 4) moved = true;
+    sheetOff = Math.min(sheetOffsets().closed, Math.max(0, off0 + dy));
+    sheetEl.style.setProperty('--off', sheetOff + 'px');
+    vel = (e.clientY - lastY) / Math.max(1, e.timeStamp - lastT); lastY = e.clientY; lastT = e.timeStamp;
+  });
+  const end = () => {
+    if (y0 === null) return;
+    y0 = null; sheetEl.classList.remove('dragging');
+    if (!moved) { cycle(); return; }
+    const o = sheetOffsets(), target = sheetOff + vel * 180;   // a flick carries the sheet to the next stop
+    setSheet(Object.keys(o).reduce((a, b) => Math.abs(o[a] - target) <= Math.abs(o[b] - target) ? a : b));
+  };
+  handle.addEventListener('pointerup', end);
+  handle.addEventListener('pointercancel', end);
+  handle.addEventListener('click', e => { if (e.detail === 0) cycle(); });   // keyboard
+  window.addEventListener('resize', () => setSheet(sheetEl.dataset.state));
+})();
+
 /** Pan so that a point is visible next to the side panel / above the bottom sheet. */
 function showPoint(lat, lon, zoom) {
-  const pad = isMobile() ? { paddingBottomRight: [0, window.innerHeight * .5] } : {};
-  if (zoom && map.getZoom() < zoom) map.flyTo([lat, lon], zoom, { duration: .5 });
-  else map.panInside([lat, lon], Object.assign({ padding: [60, 60] }, pad));
+  const pad = isMobile() ? { paddingTopLeft: [0, coverTop()], paddingBottomRight: [0, coverBottom()] } : {};
+  if (zoom && map.getZoom() < zoom) flyTo([lat, lon], zoom);
+  else map.panInside([lat, lon], Object.assign({ padding: [60, 60], animate: !reduceMotion.matches }, pad));
+}
+/** Fly so that `ll` sits in the middle of the part of the map the sheet and search bar leave visible. */
+function flyTo(ll, zoom, dur = .5) {
+  const z = zoom || map.getZoom();
+  const d = isMobile() ? (coverBottom() - coverTop()) / 2 : 0;
+  const c = map.unproject(map.project(ll, z).add([0, d]), z);
+  reduceMotion.matches ? map.setView(c, z, { animate: false }) : map.flyTo(c, z, { duration: dur });
+}
+function fitTo(bounds) {
+  const o = isMobile() ? { paddingTopLeft: [20, coverTop()], paddingBottomRight: [20, coverBottom() + 20] } : { padding: [30, 30] };
+  map.fitBounds(bounds, Object.assign(o, { animate: !reduceMotion.matches }));
 }
 
 // ───────────────────────────────────────────────────────────── vehicles
@@ -223,7 +305,7 @@ function drawVehicles() {
   for (const [id, e] of markers) if (!seen.has(id)) { vehLayer.removeLayer(e.m); markers.delete(id); }
   selVehLayer.clearLayers();
   const sel = S.selVeh && markers.get(S.selVeh);
-  if (sel) L.circleMarker(sel.m.getLatLng(), { radius: 22, color: '#0b5cab', weight: 3, fillColor: '#4a9df0', fillOpacity: .15, interactive: false }).addTo(selVehLayer);
+  if (sel) L.circleMarker(sel.m.getLatLng(), { radius: 22, color: cssv('--map-sel'), weight: 3, fillColor: cssv('--map-sel'), fillOpacity: .15, interactive: false }).addTo(selVehLayer);
   const el = $('#veh-count'); if (el) el.textContent = seen.size;
 }
 
@@ -262,15 +344,15 @@ function openVehicle(id) {
 }
 function renderVehicle(body) {
   const v = findVehicle(S.view);
-  if (!v) { body.innerHTML = `<div class="row" style="margin-bottom:8px"><button class="btn small" data-act="back">${ic('back')}${t('back')}</button></div><div class="empty">${t('no_results')}</div>`; return; }
-  body.innerHTML = `<div class="row" style="margin-bottom:8px"><button class="btn small" data-act="back">${ic('back')}${t('back')}</button></div>
-    <div class="row" style="margin-bottom:8px">${badge(v)}<div class="grow"><div style="font-size:18px;font-weight:700">${esc(v.headsign || v.line)}</div><div class="muted small">${esc(v.agency_name)}</div></div></div>
+  if (!v) { body.innerHTML = `<div class="row" style="margin-bottom:8px"><button type="button" class="btn small" data-act="back">${ic('back')}${t('back')}</button></div><div class="empty">${t('no_results')}</div>`; return; }
+  body.innerHTML = `<div class="row" style="margin-bottom:8px"><button type="button" class="btn small" data-act="back">${ic('back')}${t('back')}</button></div>
+    <div class="row" style="margin-bottom:8px">${badge(v)}<div class="grow"><div class="title">${esc(v.headsign || v.line)}</div><div class="muted small">${esc(v.agency_name)}</div></div></div>
     ${vehCard(S.view)}${vehActions(v)}`;
 }
 function vehActions(v) {
   return `<div class="row wrap" style="margin:8px 0">
-    ${v.route_id ? `<button class="btn small" data-act="route" data-agency="${esc(v.agency)}" data-route="${esc(v.route_id)}">${ic('route')}${t('route_on_map')}</button>` : ''}
-    ${v.route_id ? `<button class="btn small" data-act="only-line" data-agency="${esc(v.agency)}" data-route="${esc(v.route_id)}" data-line="${esc(v.line)}">${t('only_line')}</button>` : ''}</div>`;
+    ${v.route_id ? `<button type="button" class="btn small" data-act="route" data-agency="${esc(v.agency)}" data-route="${esc(v.route_id)}">${ic('route')}${t('route_on_map')}</button>` : ''}
+    ${v.route_id ? `<button type="button" class="btn small" data-act="only-line" data-agency="${esc(v.agency)}" data-route="${esc(v.route_id)}" data-line="${esc(v.line)}">${t('only_line')}</button>` : ''}</div>`;
 }
 
 let vehBusy = false;
@@ -289,15 +371,25 @@ async function pollVehicles() {
 }
 
 // ───────────────────────────────────────────────────────────── quick filter overlay (modes + active filters)
+const allModes = () => CHIP_MODES.every(m => S.filters.modes.has(m));
+/** With every mode showing nothing looks selected; tapping a mode then shows only that mode. */
+function modeChip(m) {
+  const on = !allModes() && S.filters.modes.has(m);
+  return `<button type="button" class="chip mode${on ? ' on' : ''}" data-act="mode" data-mode="${m}" aria-pressed="${on}"><span class="mi" style="color:${MODE_COLOR[m]}">${ic(m)}</span>${modeLabel(m)}</button>`;
+}
+function toggleMode(m) {
+  const f = S.filters;
+  if (allModes()) f.modes = new Set([m]);
+  else if (f.modes.has(m)) { f.modes.delete(m); if (!CHIP_MODES.some(x => f.modes.has(x))) f.modes = new Set(MODES); }
+  else { f.modes.add(m); if (allModes()) f.modes = new Set(MODES); }
+}
 function renderMapFilter() {
   const f = S.filters;
-  let h = `<div class="chips">` + MODES.filter(m => m !== 'ferry').map(m =>
-    `<button class="chip mode${f.modes.has(m) ? ' on' : ''}" data-act="mode" data-mode="${m}" title="${modeLabel(m)}" aria-label="${modeLabel(m)}" aria-pressed="${f.modes.has(m)}">${ic(m)}</button>`).join('') + '</div>';
+  let h = `<div class="chips" role="group" aria-label="${t('filter_modes')}">${CHIP_MODES.map(modeChip).join('')}</div>`;
   const act = [];
-  if (f.line) act.push(`<button class="chip on" data-act="clear-line" title="${t('clear_filter')}">${esc(f.line.line)} · ${esc(agName(f.line.agency))}${ic('close', 'xs')}</button>`);
-  if (f.agencies && f.agencies.size && f.agencies.size <= 3) f.agencies.forEach(a => act.push(`<button class="chip on" data-act="clear-agency" data-id="${esc(a)}" title="${t('clear_filter')}">${esc(agName(a))}${ic('close', 'xs')}</button>`));
+  if (f.line) act.push(`<button type="button" class="chip on" data-act="clear-line" aria-label="${t('clear_filter')}"><b>${esc(f.line.line)}</b> ${esc(agName(f.line.agency))}${ic('close', 'xs')}</button>`);
+  if (f.agencies && f.agencies.size && f.agencies.size <= 3) f.agencies.forEach(a => act.push(`<button type="button" class="chip on" data-act="clear-agency" data-id="${esc(a)}" aria-label="${t('clear_filter')}">${esc(agName(a))}${ic('close', 'xs')}</button>`));
   if (act.length) h += `<div class="chips">${act.join('')}</div>`;
-  if (busesHidden() && f.modes.has('bus')) h += `<div class="small muted">${t('zoom_buses')}</div>`;
   $('#mapfilter').innerHTML = h;
 }
 map.on('zoomend', () => { drawVehicles(); renderMapFilter(); });
@@ -322,7 +414,7 @@ async function loadStations() {
       if (f.agencies && !f.agencies.has(s.agency)) continue;
       const railMode = ms.find(x => x !== 'bus');
       const mk = L.circleMarker([s.lat, s.lon], {
-        radius: railMode ? (z >= 14 ? 8 : 6) : (z >= 16 ? 6.5 : 4.5), bubblingMouseEvents: false, weight: 1.5, color: '#fff',
+        radius: railMode ? (z >= 14 ? 8 : 6) : (z >= 16 ? 6.5 : 4.5), bubblingMouseEvents: false, weight: 1.5, color: cssv('--map-ring'),
         fillColor: MODE_COLOR[railMode || ms[0]] || '#2d6cdf', fillOpacity: 1,
       });
       mk.bindTooltip(esc(s.name), { direction: 'top', offset: [0, -4] });
@@ -335,9 +427,6 @@ let stnTimer;
 map.on('moveend', () => { clearTimeout(stnTimer); stnTimer = setTimeout(loadStations, 250); });
 
 // ───────────────────────────────────────────────────────────── navigation
-function expandSheet() {
-  const p = $('#panel'); if (isMobile() && p.classList.contains('collapsed')) p.classList.remove('collapsed');
-}
 function resetOverlays() { clearRouteLayer(); selLayer.clearLayers(); S.selVeh = null; setFocus(null); }
 function setTab(tab) {
   S.tab = tab; S.hist = []; S.view = { name: tab === 'stops' ? 'home' : tab === 'lines' ? 'lines' : tab };
@@ -347,6 +436,7 @@ function setTab(tab) {
 /** Push the current view on the history stack and switch to `view` (inside `tab`). */
 function go(view, tab) {
   S.hist.push({ view: S.view, tab: S.tab });
+  history.pushState(null, '', location.href);   // so the phone's Back button steps back inside the app
   S.view = view; S.tab = tab || S.tab;
   expandSheet(); render();
 }
@@ -359,11 +449,23 @@ function back() {
   if (S.view.vid) S.selVeh = S.view.vid;
   render();
 }
+window.addEventListener('popstate', () => { if (S.hist.length) back(); else setHash(); });
+const DETAIL_VIEWS = ['station', 'trip', 'vehicle', 'route'];
+/** Leave a station / trip / vehicle / line view and show the whole network again. */
+function closeDetail() {
+  const n = S.hist.length;
+  if (S.view.name === 'route' && S.filters.line) { S.filters.line = null; filtersChanged(); }   // that filter came with opening the line
+  S.hist = [];
+  S.view = { name: S.tab === 'lines' ? 'lines' : 'home' };
+  resetOverlays();
+  render();
+  if (n) history.go(-n);   // drop the browser entries those views pushed
+}
 function setFocus(f) { S.focus = f; drawVehicles(); }
 function clearRouteLayer() { routeLayer.clearLayers(); }
 
 function render() {
-  $$('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === S.tab));
+  $$('#tabs button').forEach(b => { const on = b.dataset.tab === S.tab; b.classList.toggle('active', on); on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'); });
   const body = $('#panel-body');
   const v = S.view.name;
   if (v === 'home') renderHome(body);
@@ -384,30 +486,30 @@ function setHash() {
   else if (v.name === 'trip') h = '#t=' + encodeURIComponent(v.agency + '|' + v.trip);
   history.replaceState(null, '', h || location.pathname);
 }
-const backBtn = () => `<button class="btn small" data-act="back">${ic('back')}${t('back')}</button>`;
-const refreshRow = txt => `<div class="row muted small" style="margin-top:8px"><span>${txt}</span><div class="grow"></div><button class="btn small" data-act="reload">${ic('refresh')}${t('refresh')}</button></div>`;
+const backBtn = () => `<button type="button" class="btn small" data-act="back">${ic('back')}${t('back')}</button>`;
+const refreshRow = txt => `<div class="row muted small" style="margin-top:8px"><span>${txt}</span><div class="grow"></div><button type="button" class="btn small" data-act="reload">${ic('refresh')}${t('refresh')}</button></div>`;
 
 // ───────────────────────────────────────────────────────────── home (favourites / nearby)
-function stationRow(s, extra = '') {
+function stationRow(s, meta = '') {
   return `<div class="list-item" data-act="station" data-agency="${esc(s.agency)}" data-id="${esc(s.station_id)}" data-lat="${s.lat}" data-lon="${s.lon}">
     <span class="mode-ic">${modeIcons(s.modes)}</span>
-    <div class="grow"><div class="ellipsis"><b>${esc(s.name)}</b></div><div class="muted small ellipsis">${esc(s.agency_name || agName(s.agency))}${extra}</div></div>
-    <span class="muted">${ic('chev')}</span></div>`;
+    <div class="grow"><div class="ellipsis"><b>${esc(s.name)}</b></div><div class="muted small ellipsis">${esc(s.agency_name || agName(s.agency))}</div></div>
+    ${meta ? `<span class="muted small num">${meta}</span>` : ''}<span class="muted">${ic('chev')}</span></div>`;
 }
 function renderHome(body) {
   let h = '';
   const imp = Object.values(S.agencies).filter(a => !a.ready).length;
   if (imp) h += `<div class="notice small">${t('importing')} (${imp})</div>`;
-  h += `<div class="row" style="margin-bottom:10px"><button class="btn primary" data-act="locate">${ic('target')}${t('nearby')}</button></div>`;
+  h += `<button type="button" class="btn primary block" data-act="locate">${ic('target')}${t('nearby')}</button>`;
   if (S.nearby) {
     h += `<h2>${t('nearby_title')}</h2>`;
-    h += S.nearby.length ? S.nearby.map(s => stationRow(s, ` · ${s.dist} m`)).join('') : `<div class="empty">${t('no_nearby')}</div>`;
+    h += S.nearby.length ? S.nearby.map(s => stationRow(s, `${s.dist} ${t('m')}`)).join('') : `<div class="empty">${t('no_nearby')}</div>`;
   }
   h += `<h2>${t('favorites')}</h2>`;
   if (!S.favs.length) h += `<div class="empty">${t('no_favorites')}</div>`;
-  else h += S.favs.map((f, i) => `<div class="card fav" data-act="station" data-agency="${esc(f.agency)}" data-id="${esc(f.station_id)}" style="cursor:pointer">
+  else h += S.favs.map((f, i) => `<div class="fav" data-act="station" data-agency="${esc(f.agency)}" data-id="${esc(f.station_id)}">
       <div class="row"><span class="mode-ic">${modeIcons(f.modes)}</span><div class="grow ellipsis"><b>${esc(f.name)}</b> <span class="muted small">${esc(agName(f.agency))}</span></div>
-      <button class="star" data-act="unfav" data-i="${i}" title="${t('remove_fav')}" aria-label="${t('remove_fav')}">${ic('star')}</button></div>
+      <button type="button" class="star" data-act="unfav" data-i="${i}" title="${t('remove_fav')}" aria-label="${t('remove_fav')}">${ic('star')}</button></div>
       <div class="fav-next muted small" id="fav-${i}">…</div></div>`).join('');
   body.innerHTML = h;
   loadFavNext();
@@ -419,7 +521,7 @@ async function loadFavNext() {
       const el = $('#fav-' + i); if (!el || S.view.name !== 'home') return;
       el.innerHTML = d.items && d.items.length ? d.items.map(it => {
         const min = Math.round((it.expected - nowTs()) / 60);
-        return `<div class="row" style="margin-top:4px">${badge(it)}<span class="grow ellipsis">${esc(it.headsign)}</span><b style="color:var(--text)">${min < 1 ? t('now') : min < 60 ? min + ' ' + t('min') : clock(it.expected)}</b>${it.rt ? '<span class="tag live"><span class="d"></span></span>' : ''}</div>`;
+        return `<div class="row" style="margin-top:4px">${badge(it)}<span class="grow ellipsis">${esc(it.headsign)}</span><b class="num" style="color:${it.rt ? 'var(--good)' : 'var(--text)'}">${min < 1 ? t('now') : min < 60 ? min + ' ' + t('min') : clock(it.expected)}</b></div>`;
       }).join('') : t('no_deps');
     } catch (e) { /* ignore */ }
   }));
@@ -447,8 +549,8 @@ async function renderStation(body) {
     drawStationHeader(body);
     const st = d.station;
     selLayer.clearLayers();
-    L.circleMarker([st.lat, st.lon], { radius: 13, color: '#0b5cab', weight: 3, fillOpacity: .1, interactive: false }).addTo(selLayer);
-    if (v.fresh !== true) { v.fresh = true; if (isMobile()) { map.setView([st.lat, st.lon], Math.max(map.getZoom(), 15)); showPoint(st.lat, st.lon); } else map.flyTo([st.lat, st.lon], Math.max(map.getZoom(), 15), { duration: .6 }); }
+    L.circleMarker([st.lat, st.lon], { radius: 13, color: cssv('--map-sel'), weight: 3, fillOpacity: .1, interactive: false }).addTo(selLayer);
+    if (v.fresh !== true) { v.fresh = true; flyTo([st.lat, st.lon], Math.max(map.getZoom(), 15), .6); }
   } catch (e) {
     if (!v.data) body.innerHTML = `<div class="empty">${t('error')}</div>`;
   }
@@ -457,23 +559,23 @@ function drawStationHeader(body) {
   const d = S.view.data; const st = d.station;
   const fav = isFav(st.agency, st.station_id);
   let h = `<div class="row" style="margin-bottom:8px">${backBtn()}<div class="grow"></div>
-    <button class="btn small" data-act="focus-stn">${ic('target')}${t('on_map')}</button>
-    <button class="star" data-act="fav" title="${fav ? t('remove_fav') : t('add_fav')}" aria-label="${fav ? t('remove_fav') : t('add_fav')}">${ic(fav ? 'star' : 'starO')}</button></div>
+    <button type="button" class="btn small" data-act="focus-stn">${ic('target')}${t('on_map')}</button>
+    <button type="button" class="star" data-act="fav" title="${fav ? t('remove_fav') : t('add_fav')}" aria-label="${fav ? t('remove_fav') : t('add_fav')}">${ic(fav ? 'star' : 'starO')}</button></div>
     <div class="row" style="margin-bottom:8px"><span class="mode-ic lg">${modeIcons(st.modes)}</span>
-      <div class="grow"><div style="font-size:19px;font-weight:700">${esc(st.name)}</div><div class="muted small">${esc(st.agency_name)}</div></div></div>`;
+      <div class="grow"><div class="title">${esc(st.name)}</div><div class="muted small">${esc(st.agency_name)}</div></div></div>`;
   h += rtNotice(d.rt_status, d.items);
-  for (const a of d.alerts || []) h += alertCard(a, true);
   h += `<div id="dep-list">${depList(d)}</div>`;
+  if ((d.alerts || []).length) h += `<details class="alerts-fold"><summary>${ic('warn')}${t('tab_alerts')} (${d.alerts.length})</summary>${d.alerts.map(a => alertCard(a, true)).join('')}</details>`;
   h += refreshRow(`${t('updated_lbl')} ${clockS(d.time)}`);
   const keep = body.scrollTop;
   body.innerHTML = h; body.scrollTop = keep;
 }
 function rtNotice(status, items) {
   const anyRt = (items || []).some(i => i.rt);
-  if (status === 'live' && anyRt) return `<div class="notice ok small"><span class="tag live"><span class="d"></span>${t('rt_live')}</span></div>`;
+  if (status === 'live' && anyRt) return `<div class="notice ok small">${t('rt_live')}</div>`;
   if (status === 'live') return '';
   const key = { none: 'rt_none', empty: 'rt_empty', stale: 'rt_stale', error: 'rt_error', unknown: 'rt_empty' }[status] || 'rt_none';
-  return `<div class="notice small">${t(key)}</div>`;
+  return `<div class="notice warn small">${t(key)}</div>`;
 }
 function depList(d) {
   if (!d.items.length) return `<div class="empty">${t('no_deps')}</div>`;
@@ -483,13 +585,14 @@ function depList(d) {
     const big = mins < 1 ? t('now') : mins < 60 ? mins + ' ' + t('min') : clock(it.expected);
     const late = it.delay >= 300;
     let tag;
-    if (it.cancelled) tag = `<span class="tag late">${ic('close', 'xs')}${t('cancelled')}</span>`;
-    else if (it.rt === 'rt') tag = `<span class="tag live"><span class="d"></span>${t('live')}${Math.abs(it.delay) >= 60 ? ' · <span class="' + (late ? 'late' : '') + '">' + esc(fmtDelay(it.delay)) + '</span>' : ''}</span>`;
-    else if (it.rt === 'est') tag = `<span class="tag est"><span class="d"></span>${t('estimated')}${Math.abs(it.delay) >= 60 ? ' · ' + esc(fmtDelay(it.delay)) : ''}</span>`;
-    else tag = `<span class="tag"><span class="d"></span>${t('scheduled')}</span>`;
+    const dl = Math.abs(it.delay) >= 60 ? `<span class="tag"><span class="${late ? 'late' : ''}">${esc(fmtDelay(it.delay))}</span></span>` : '';
+    if (it.cancelled) tag = `<span class="tag late">${t('cancelled')}</span>`;
+    else if (it.rt === 'rt') tag = `<span class="tag live">${t('live')}</span>${dl}`;
+    else if (it.rt === 'est') tag = `<span class="tag est">${t('estimated')}</span>${dl}`;
+    else tag = `<span class="tag">${t('scheduled')}</span>`;
     const second = mins < 60 && mins >= 1 ? `<div class="muted small">${clock(it.expected)}</div>` : (Math.abs(it.delay) >= 60 ? `<div class="muted small">${t('sched_short')} ${clock(it.sched)}</div>` : '');
     return `<div class="dep${it.cancelled ? ' cancelled' : ''}" data-act="trip" data-agency="${esc(S.view.agency)}" data-trip="${esc(it.trip_id)}" data-date="${esc(it.date)}">
-      ${badge(it)}<div class="grow"><div class="dest ellipsis">${esc(it.headsign || it.line)}</div><div>${tag}</div></div>
+      ${badge(it)}<div class="grow"><div class="dest ellipsis">${esc(it.headsign || it.line)}</div><div class="tags">${tag}</div></div>
       <div class="when"><div class="big${mins < 3 && !it.cancelled ? ' soon' : ''}">${big}</div>${second}</div></div>`;
   }).join('');
 }
@@ -512,7 +615,7 @@ function alertVisible(a) {
 function alertCard(a, compact) {
   const url = alertText(a.url), head = alertText(a.header), desc = alertText(a.description);
   return `<div class="alert-card small">
-    <div class="alert-top">${ic('warn')}<b>${esc(a.agency_name)}</b>${(a.lines || []).length ? `<span class="muted">· ${esc(a.lines.slice(0, 6).join(', '))}${a.lines.length > 6 ? '…' : ''}</span>` : ''}</div>
+    <div class="alert-top">${ic('warn')}<b>${esc(a.agency_name)}</b>${(a.lines || []).length ? `<span class="muted">${esc(a.lines.slice(0, 6).join(', '))}${a.lines.length > 6 ? '…' : ''}</span>` : ''}</div>
     ${head ? `<div>${esc(head)}</div>` : ''}
     ${desc ? `<div class="muted" style="margin-top:3px">${esc(desc).slice(0, compact ? 240 : 600)}</div>` : ''}
     ${a.end ? `<div class="muted">${t('until')} ${new Date(a.end * 1000).toLocaleString()}</div>` : ''}
@@ -529,7 +632,7 @@ async function loadAlerts() {
   if (S.view.name === 'alerts') drawAlerts();
 }
 function renderAlerts(body) {
-  body.innerHTML = `<input type="text" id="alerts-q" placeholder="${t('alerts_filter')}" style="margin-bottom:8px"><div id="alerts-list"></div>`;
+  body.innerHTML = `<input type="search" id="alerts-q" autocomplete="off" placeholder="${t('alerts_filter')}" style="margin-bottom:8px"><div id="alerts-list"></div>`;
   $('#alerts-q').oninput = drawAlerts; drawAlerts();
 }
 function drawAlerts() {
@@ -561,8 +664,8 @@ async function renderTrip(body) {
     const c = colors(d);
     const idx = d.stops.findIndex(s => s.expected >= now - 30);
     let h = `<div class="row" style="margin-bottom:8px">${backBtn()}<div class="grow"></div>
-      <button class="btn small" data-act="route" data-agency="${esc(d.agency)}" data-route="${esc(d.route_id)}">${ic('route')}${t('route_on_map')}</button></div>
-      <div class="row" style="margin-bottom:6px">${badge(d)}<div class="grow"><div style="font-size:18px;font-weight:700">${esc(d.headsign)}</div><div class="muted small">${esc(agName(d.agency))}</div></div></div>
+      <button type="button" class="btn small" data-act="route" data-agency="${esc(d.agency)}" data-route="${esc(d.route_id)}">${ic('route')}${t('route_on_map')}</button></div>
+      <div class="row" style="margin-bottom:6px">${badge(d)}<div class="grow"><div class="title">${esc(d.headsign)}</div><div class="muted small">${esc(agName(d.agency))}</div></div></div>
       ${vehCard(v)}`;
     if (d.cancelled) h += `<div class="notice bad small">${ic('close', 'xs')}${t('cancelled')}</div>`;
     else if (!d.has_rt) h += `<div class="notice small">${t('rt_none')}</div>`;
@@ -577,7 +680,8 @@ async function renderTrip(body) {
     h += refreshRow(`${t('updated_lbl')} ${clockS(now)}`);
     const keep = body.scrollTop;
     body.innerHTML = h; body.scrollTop = keep;
-    drawTripOnMap(d, idx, !v.fitted); v.fitted = true;
+    // a live vehicle keeps the user's own zoom and position; only a scheduled trip is framed
+    drawTripOnMap(d, idx, !v.fitted && !veh && !v.vid); v.fitted = true;
     setFocus({ agency: d.agency, trip_id: d.trip_id });
   } catch (e) { if (!v.data) body.innerHTML = `<div class="empty">${t('error')}</div>`; }
 }
@@ -585,13 +689,13 @@ function drawTripOnMap(d, idx, fit) {
   clearRouteLayer(); selLayer.clearLayers();
   const c = colors(d).bg;
   const pts = d.shape && d.shape.length ? d.shape : d.stops.filter(s => s.lat).map(s => [s.lat, s.lon]);
-  const pl = L.polyline(pts, { color: c, weight: 5, opacity: .8 }).addTo(routeLayer);
+  const pl = L.polyline(pts, { color: c, weight: 5, opacity: .8, bubblingMouseEvents: false }).addTo(routeLayer);
   d.stops.forEach((s, i) => {
     if (!s.lat) return;
-    L.circleMarker([s.lat, s.lon], { radius: i === idx ? 8 : 5, weight: 2, color: '#fff', fillColor: i === idx ? '#111' : c, fillOpacity: 1, bubblingMouseEvents: false })
-      .bindTooltip(`${esc(s.name)} · ${clock(s.expected)}`).on('click', () => openStation(d.agency, s.station_id)).addTo(routeLayer);
+    L.circleMarker([s.lat, s.lon], { radius: i === idx ? 8 : 5, weight: 2, color: cssv('--map-ring'), fillColor: i === idx ? cssv('--ink') : c, fillOpacity: 1, bubblingMouseEvents: false })
+      .bindTooltip(`${esc(s.name)} <b>${clock(s.expected)}</b>`).on('click', () => openStation(d.agency, s.station_id)).addTo(routeLayer);
   });
-  if (fit) map.fitBounds(pl.getBounds(), isMobile() ? { paddingBottomRight: [20, window.innerHeight * .5], padding: [20, 20] } : { padding: [30, 30] });
+  if (fit) fitTo(pl.getBounds());
 }
 
 // ───────────────────────────────────────────────────────────── live map tab (filters)
@@ -599,15 +703,17 @@ function renderLive(soft) {
   const body = $('#panel-body');
   if (soft && $('#live-root')) { updateLiveCounts(); return; }
   const f = S.filters;
-  body.innerHTML = `<div id="live-root"><div class="card"><b id="veh-count">0</b> ${t('vehicles_shown')}</div>
-    <h2>${t('filter_modes')}</h2><div class="chips">${MODES.filter(m => m !== 'ferry').map(m => `<button class="chip mode wide${f.modes.has(m) ? ' on' : ''}" data-act="mode" data-mode="${m}">${ic(m)}${modeLabel(m)}</button>`).join('')}</div>
-    ${f.line ? `<h2>${t('filter_line')}</h2><div class="chips"><button class="chip on" data-act="clear-line">${esc(f.line.line)} · ${esc(agName(f.line.agency))}${ic('close', 'xs')}</button></div>` : ''}
+  body.innerHTML = `<div id="live-root"><div class="card"><b id="veh-count" class="num">0</b> ${t('vehicles_shown')}</div>
+    <h2>${t('filter_modes')}</h2><div class="chips">${CHIP_MODES.map(modeChip).join('')}</div>
+    <h2>${t('map_style')}</h2>
+    <div class="seg" role="group" aria-label="${t('map_style')}">${['simple', 'detailed'].map(k => `<button type="button" class="${S.mapStyle === k ? 'on' : ''}" data-act="mapstyle" data-style="${k}" aria-pressed="${S.mapStyle === k}">${t('style_' + k)}</button>`).join('')}</div>
+    ${f.line ? `<h2>${t('filter_line')}</h2><div class="chips"><button type="button" class="chip on" data-act="clear-line"><b>${esc(f.line.line)}</b> ${esc(agName(f.line.agency))}${ic('close', 'xs')}</button></div>` : ''}
     <h2>${t('filter_agencies')}</h2>
-    <div class="row small" style="margin-bottom:6px"><button class="btn small" data-act="ag-all">${t('all')}</button><button class="btn small" data-act="ag-none">${t('none')}</button></div>
+    <div class="row wrap" style="margin-bottom:8px"><button type="button" class="btn small" data-act="ag-all">${t('all')}</button><button type="button" class="btn small" data-act="ag-none">${t('none')}</button></div>
     <div class="checks" id="ag-checks"></div>
-    <h2></h2><div class="checks">
-      <label><input type="checkbox" data-act="opt" data-opt="showStops" ${f.showStops ? 'checked' : ''}> ${t('show_stops')}</label>
-      <label><input type="checkbox" data-act="opt" data-opt="est" ${f.est ? 'checked' : ''}> ${t('show_est')} <span class="muted small">(Euskotren…)</span></label></div></div>`;
+    <div class="checks" style="margin-top:24px">
+      <label><input type="checkbox" data-act="opt" data-opt="showStops" ${f.showStops ? 'checked' : ''}><span class="grow">${t('show_stops')}</span></label>
+      <label><input type="checkbox" data-act="opt" data-opt="est" ${f.est ? 'checked' : ''}><span class="grow">${t('show_est')} <span class="muted small">(Euskotren)</span></span></label></div></div>`;
   updateLiveCounts();
 }
 function updateLiveCounts() {
@@ -618,7 +724,7 @@ function updateLiveCounts() {
   const withData = list.filter(a => counts[a.id]).sort((a, b) => a.name.localeCompare(b.name));
   const without = list.filter(a => !counts[a.id]).sort((a, b) => a.name.localeCompare(b.name));
   const row = (a, n) => `<label><input type="checkbox" data-act="ag" data-id="${esc(a.id)}" ${!S.filters.agencies || S.filters.agencies.has(a.id) ? 'checked' : ''}>
-    <span class="dotc ${n ? 'live' : ''}"></span><span class="grow">${esc(a.name)}</span><span class="muted small">${n ? n + ' ' + t('live_vehicles') : t('no_rt')}</span></label>`;
+    <span class="grow">${esc(a.name)}</span><span class="small ${n ? 'tag live' : 'muted'}">${n ? n + ' ' + t('live_vehicles') : t('no_rt')}</span></label>`;
   el.innerHTML = withData.map(a => row(a, counts[a.id])).join('') + without.map(a => row(a, 0)).join('');
   const vc = $('#veh-count'); if (vc) vc.textContent = markers.size;
 }
@@ -627,8 +733,8 @@ function updateLiveCounts() {
 async function renderLines(body) {
   const ags = Object.values(S.agencies).filter(a => a.ready).sort((a, b) => a.name.localeCompare(b.name));
   if (!S.linesAgency || !S.agencies[S.linesAgency]) S.linesAgency = (ags.find(a => a.id === 'euskotren') || ags[0] || {}).id || '';
-  body.innerHTML = `<select class="field" id="lines-ag" aria-label="${t('pick_agency')}">${ags.map(a => `<option value="${esc(a.id)}"${a.id === S.linesAgency ? ' selected' : ''}>${esc(a.name)}${a.rt.vehicles || a.rt.trips ? ' (live)' : ''}</option>`).join('')}</select>
-    <input type="text" id="lines-q" placeholder="${t('filter_lines')}" style="margin:8px 0"><div id="lines-list"><div class="empty">${t('loading')}</div></div>`;
+  body.innerHTML = `<select class="field" id="lines-ag" aria-label="${t('pick_agency')}">${ags.map(a => `<option value="${esc(a.id)}"${a.id === S.linesAgency ? ' selected' : ''}>${esc(a.name)}${a.rt.vehicles || a.rt.trips ? ' (' + t('live').toLowerCase() + ')' : ''}</option>`).join('')}</select>
+    <input type="search" id="lines-q" placeholder="${t('filter_lines')}" autocomplete="off" style="margin:8px 0"><div id="lines-list"><div class="empty">${t('loading')}</div></div>`;
   $('#lines-ag').onchange = e => { S.linesAgency = e.target.value; localStorage.setItem('linesAgency', S.linesAgency); renderLines(body); };
   $('#lines-q').oninput = drawLinesList;
   if (!S.linesAgency) return;
@@ -656,10 +762,10 @@ async function renderRoute(body) {
     const c = colors(d);
     const isOnly = S.filters.line && S.filters.line.agency === v.agency && S.filters.line.route_id === v.route;
     let h = `<div class="row" style="margin-bottom:8px">${backBtn()}<div class="grow"></div>
-      <button class="btn small${isOnly ? ' primary' : ''}" data-act="${isOnly ? 'clear-line' : 'only-line'}" data-agency="${esc(v.agency)}" data-route="${esc(v.route)}" data-line="${esc(d.line)}">${isOnly ? t('clear_filter') : t('only_line')}</button></div>
-      <div class="row" style="margin-bottom:8px">${badge(d)}<div class="grow"><div style="font-size:18px;font-weight:700">${esc(d.long || d.line)}</div><div class="muted small">${esc(agName(v.agency))}</div></div></div>`;
+      <button type="button" class="btn small${isOnly ? ' primary' : ''}" data-act="${isOnly ? 'clear-line' : 'only-line'}" data-agency="${esc(v.agency)}" data-route="${esc(v.route)}" data-line="${esc(d.line)}">${isOnly ? t('clear_filter') : t('only_line')}</button></div>
+      <div class="row" style="margin-bottom:8px">${badge(d)}<div class="grow"><div class="title">${esc(d.long || d.line)}</div><div class="muted small">${esc(agName(v.agency))}</div></div></div>`;
     const live = S.vehicles.filter(x => x.agency === v.agency && x.route_id === v.route).length;
-    h += `<div class="notice ${live ? 'ok' : ''} small">${live ? `<span class="tag live"><span class="d"></span>${live} ${t('live_vehicles')}</span>` : t('no_rt')}</div>`;
+    h += `<div class="notice ${live ? 'ok' : ''} small">${live ? `${live} ${t('live_vehicles')}` : t('no_rt')}</div>`;
     for (const sh of d.shapes) {
       h += `<h2>${t('departs_from')} ${esc(sh.headsign || '')}</h2><ul class="tl" style="--c:${c.bg}">` +
         sh.stops.map(s => `<li data-act="station" data-agency="${esc(v.agency)}" data-id="${esc(s.station_id)}" data-lat="${s.lat}" data-lon="${s.lon}"><span class="nm">${esc(s.name)}</span></li>`).join('') + '</ul>';
@@ -670,28 +776,45 @@ async function renderRoute(body) {
     d.shapes.forEach((sh, i) => {
       const pts = sh.pts && sh.pts.length ? sh.pts : sh.stops.filter(s => s.lat).map(s => [s.lat, s.lon]);
       if (!pts.length) return;
-      const pl = L.polyline(pts, { color: c.bg, weight: 5, opacity: i ? .55 : .85, dashArray: i ? '8 8' : null }).addTo(routeLayer);
+      const pl = L.polyline(pts, { color: c.bg, weight: 5, opacity: i ? .55 : .85, dashArray: i ? '8 8' : null, bubblingMouseEvents: false }).addTo(routeLayer);
       bounds.extend(pl.getBounds());
-      sh.stops.forEach(s => s.lat && L.circleMarker([s.lat, s.lon], { radius: 5, weight: 2, color: '#fff', fillColor: c.bg, fillOpacity: 1, bubblingMouseEvents: false })
+      sh.stops.forEach(s => s.lat && L.circleMarker([s.lat, s.lon], { radius: 5, weight: 2, color: cssv('--map-ring'), fillColor: c.bg, fillOpacity: 1, bubblingMouseEvents: false })
         .bindTooltip(esc(s.name)).on('click', () => openStation(v.agency, s.station_id)).addTo(routeLayer));
     });
-    if (bounds.isValid()) map.fitBounds(bounds, isMobile() ? { paddingBottomRight: [20, window.innerHeight * .5], padding: [20, 20] } : { padding: [30, 30] });
+    if (bounds.isValid()) fitTo(bounds);
     setFocus({ agency: v.agency, route_id: v.route });
   } catch (e) { body.innerHTML = `<div class="empty">${t('error')}</div>`; }
 }
 
 // ───────────────────────────────────────────────────────────── sources
+let deferredInstall = null;
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; if (S.view.name === 'info') render(); });
+window.addEventListener('appinstalled', () => { deferredInstall = null; if (S.view.name === 'info') render(); });
+function installBlock() {
+  if (isStandalone()) return '';
+  if (deferredInstall) return `<h2>${t('install_title')}</h2><p class="small muted" style="margin:0 0 8px">${t('install_text')}</p><button type="button" class="btn primary block" data-act="install">${t('install')}</button>`;
+  if (isIOS) return `<h2>${t('install_title')}</h2><p class="small muted" style="margin:0">${t('install_text')} ${t('install_ios')}</p>`;
+  return '';
+}
 async function renderInfo(body) {
-  body.innerHTML = `<p class="small muted">${t('src_intro')}</p><div id="info-t"><div class="empty">${t('loading')}</div></div>`;
+  body.innerHTML = `<h2>${t('language')}</h2>
+    <div class="seg" role="group" aria-label="${t('language')}">${[['en', 'English'], ['es', 'Español'], ['eu', 'Euskara']].map(([c, n]) =>
+      `<button type="button" class="${S.lang === c ? 'on' : ''}" lang="${c}" data-act="lang" data-lang="${c}" aria-pressed="${S.lang === c}">${n}</button>`).join('')}</div>
+    ${installBlock()}
+    <h2>${t('src_title')}</h2><p class="small muted" style="margin:0 0 8px">${t('src_intro')}</p><div id="info-t"><div class="empty">${t('loading')}</div></div>
+    <p class="credit">${t('credit')}</p>`;
   try {
     const d = await api('agencies', { probe: 1 });
     S.agencies = Object.fromEntries(d.agencies.map(a => [a.id, a]));
+    if (S.view.name !== 'info') return;
     const st = s => s ? `<span class="st ${s.status}">${t('st_' + s.status)}${s.n ? ' ' + s.n : ''}</span>` : '<span class="muted">—</span>';
     $('#info-t').innerHTML = `<table class="src"><tr><th>${t('src_operator')}</th><th>${t('src_veh')}</th><th>${t('src_trips')}</th><th>${t('src_alerts')}</th></tr>` +
       d.agencies.map(a => `<tr><td>${esc(a.name)}<div class="muted small">${a.ready ? (a.modes || []).map(m => modeSvg(m, 'sm')).join('') + ' ' + esc((a.gtfs_updated || '').slice(0, 16)) : (a.importing ? t('importing') : esc(a.error || ''))}</div></td>
       <td>${st(a.rt.vehicles)}</td><td>${st(a.rt.trips)}</td><td>${st(a.rt.alerts)}</td></tr>`).join('') + '</table>' +
-      `<p class="small muted">${d.agencies.filter(a => a.ready).length}/${d.agencies.length} · ${new Date(d.time * 1000).toLocaleTimeString()}</p>`;
-  } catch (e) { $('#info-t').innerHTML = `<div class="empty">${t('error')}</div>`; }
+      `<p class="small muted">${t('updated_lbl')} ${clockS(d.time)}</p>`;
+  } catch (e) { const el = $('#info-t'); if (el) el.innerHTML = `<div class="empty">${t('error')}</div>`; }
 }
 
 // ───────────────────────────────────────────────────────────── search (stops, lines, operators in one box)
@@ -745,6 +868,38 @@ function pickSuggestion(s) {
   }
 }
 
+// ───────────────────────────────────────────────────────────── language + theme
+function setLang(code) {
+  S.lang = I18N[code] ? code : 'en'; localStorage.setItem('lang', S.lang);
+  const nm = { en: 'English', es: 'Español', eu: 'Euskara' }[S.lang];
+  $('#btn-lang').setAttribute('aria-label', t('language') + ': ' + nm); $('#btn-lang').title = t('language');
+  $$('#lang-menu [data-lang]').forEach(b => b.setAttribute('aria-checked', b.dataset.lang === S.lang));
+  applyI18n(); updateThemeBtn(); renderMapFilter(); render();
+}
+function closeLangMenu() { $('#lang-menu').hidden = true; $('#btn-lang').setAttribute('aria-expanded', 'false'); }
+$('#btn-lang').addEventListener('click', e => {
+  e.stopPropagation();
+  const m = $('#lang-menu'); m.hidden = !m.hidden;
+  $('#btn-lang').setAttribute('aria-expanded', String(!m.hidden));
+});
+document.addEventListener('click', e => { if (!e.target.closest('.lang-wrap')) closeLangMenu(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#lang-menu').hidden) { closeLangMenu(); $('#btn-lang').focus(); } });
+
+const theme = () => document.documentElement.dataset.theme;
+function updateThemeBtn() {
+  const dark = theme() === 'dark', b = $('#btn-theme');
+  b.innerHTML = ic(dark ? 'sun' : 'moon');
+  b.title = t(dark ? 'theme_to_light' : 'theme_to_dark'); b.setAttribute('aria-label', b.title);
+}
+function setTheme(th, save) {
+  document.documentElement.dataset.theme = th;
+  if (save) localStorage.setItem('theme', th);
+  $$('meta[name=theme-color]').forEach(m => { m.removeAttribute('media'); m.content = cssv('--surface'); });
+  updateThemeBtn(); applyBasemap(); loadStations(); drawVehicles();
+}
+$('#btn-theme').addEventListener('click', () => setTheme(theme() === 'dark' ? 'light' : 'dark', true));
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => { if (!localStorage.getItem('theme')) setTheme(e.matches ? 'dark' : 'light', false); });
+
 // ───────────────────────────────────────────────────────────── geolocation
 function locate() {
   if (!navigator.geolocation) { toast(t('loc_denied')); return; }
@@ -754,7 +909,7 @@ function locate() {
     S.me = [lat, lon];
     meLayer.clearLayers();
     L.marker(S.me, { icon: L.divIcon({ className: '', html: '<div class="me"></div>', iconSize: [0, 0] }), interactive: false }).addTo(meLayer);
-    map.flyTo(S.me, 16, { duration: .8 });
+    expandSheet(); flyTo(S.me, 16, .8);
     try { S.nearby = (await api('nearby', { lat, lon, radius: 600 })).results; } catch (e) { S.nearby = []; }
     setTab('stops'); expandSheet();
   }, () => toast(t('loc_denied')), { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
@@ -772,7 +927,7 @@ document.addEventListener('click', ev => {
       openStation(d.agency, d.id); break;
     case 'trip': openTrip(d.agency, d.trip, d.date); break;
     case 'route': openRoute(d.agency, d.route); break;
-    case 'back': back(); break;
+    case 'back': S.hist.length ? history.back() : back(); break;
     case 'reload': render(); break;
     case 'fav': {
       const st = S.view.data && S.view.data.station; if (!st) break;
@@ -781,12 +936,15 @@ document.addEventListener('click', ev => {
       saveFavs(); drawStationHeader($('#panel-body')); break;
     }
     case 'unfav': S.favs.splice(+d.i, 1); saveFavs(); render(); break;
-    case 'focus-stn': { const st = S.view.data && S.view.data.station; if (st) { map.flyTo([st.lat, st.lon], 17, { duration: .5 }); if (isMobile()) $('#panel').classList.add('collapsed'); } break; }
+    case 'focus-stn': { const st = S.view.data && S.view.data.station; if (st) { if (isMobile()) setSheet('closed'); flyTo([st.lat, st.lon], 17); } break; }
     case 'locate': locate(); break;
     case 'only-line': S.filters.line = { agency: d.agency, route_id: d.route, line: d.line }; filtersChanged(); if (S.view.name === 'route') render(); break;
     case 'clear-line': S.filters.line = null; filtersChanged(); if (S.view.name === 'route') render(); break;
     case 'clear-agency': S.filters.agencies.delete(d.id); if (!S.filters.agencies.size) S.filters.agencies = null; filtersChanged(); break;
-    case 'mode': S.filters.modes.has(d.mode) ? S.filters.modes.delete(d.mode) : S.filters.modes.add(d.mode); filtersChanged(); break;
+    case 'mode': toggleMode(d.mode); filtersChanged(); break;
+    case 'lang': setLang(d.lang); closeLangMenu(); break;
+    case 'mapstyle': S.mapStyle = d.style; localStorage.setItem('mapStyle', d.style); applyBasemap(); renderLive(); break;
+    case 'install': if (deferredInstall) { deferredInstall.prompt(); deferredInstall.userChoice.finally(() => { deferredInstall = null; if (S.view.name === 'info') render(); }); } break;
     case 'ag-all': S.filters.agencies = null; filtersChanged(); break;
     case 'ag-none': S.filters.agencies = new Set(); filtersChanged(); break;
   }
@@ -804,15 +962,21 @@ document.addEventListener('change', ev => {
 });
 $$('#tabs button').forEach(b => b.addEventListener('click', () => { setTab(b.dataset.tab); if (b.dataset.tab === 'alerts') loadAlerts(); expandSheet(); }));
 $('#btn-locate').addEventListener('click', locate);
-$('#lang').value = S.lang;
-$('#lang').addEventListener('change', e => { S.lang = e.target.value; localStorage.setItem('lang', S.lang); applyI18n(); renderMapFilter(); render(); });
-$('#sheet-handle').addEventListener('click', () => {
-  const p = $('#panel');
-  if (p.classList.contains('collapsed')) { p.classList.remove('collapsed'); }
-  else if (!p.classList.contains('expanded')) p.classList.add('expanded');
-  else { p.classList.remove('expanded'); p.classList.add('collapsed'); }
+// a tap on empty map closes whatever is open and shows every service again (markers and the line itself swallow their own taps)
+map.on('click', () => {
+  if (DETAIL_VIEWS.includes(S.view.name)) closeDetail();
+  if (isMobile()) setSheet('closed');
 });
-map.on('click', () => { if (isMobile()) $('#panel').classList.add('collapsed'); });
+// rows built as <div data-act> behave like buttons for keyboard and screen-reader users
+new MutationObserver(() => $$('#panel-body [data-act]:not(button):not(input)').forEach(el => {
+  if (el.hasAttribute('tabindex')) return;
+  el.tabIndex = 0; if (!el.querySelector('button')) el.setAttribute('role', 'button');
+})).observe($('#panel-body'), { childList: true, subtree: true });
+document.addEventListener('keydown', e => {
+  const el = e.target;
+  if ((e.key === 'Enter' || e.key === ' ') && el.matches && el.matches('[data-act][tabindex]') && el.tagName !== 'BUTTON' && el.tagName !== 'INPUT') { e.preventDefault(); el.click(); }
+});
+window.addEventListener('offline', () => toast(t('offline'), 4000));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { pollVehicles(); refreshView(); } });
 
 function refreshView() {
@@ -872,7 +1036,12 @@ async function loadAgencies() {
 async function boot() {
   const h = decodeURIComponent((location.hash || '').slice(1));
   $('#btn-locate').innerHTML = ic('target');
-  $('#brand-logo').innerHTML = ic('train');
+  $('#search-ic').innerHTML = ic('search');
+  $('#btn-lang').innerHTML = ic('globe');
+  setLang(S.lang);
+  $$('#tabs button').forEach(b => { $('.tab-ic', b).innerHTML = ic(b.dataset.ic); });
+  setSheet('half');
+  applyBasemap();
   applyI18n();
   renderMapFilter();
   render();
@@ -882,6 +1051,8 @@ async function boot() {
   if (importing) { // first run: timetables are still being imported
     const iv = setInterval(async () => { const still = await loadAgencies(); if (!still) { clearInterval(iv); loadStations(); } }, 8000);
   }
+  if (new URLSearchParams(location.search).get('near') === '1') { history.replaceState(null, '', location.pathname); locate(); }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { /* not on https/localhost: fine */ });
   if (h.startsWith('s=')) { const [a, id] = h.slice(2).split('|'); if (a && id) openStation(a, id); }
   else if (h.startsWith('t=')) { const [a, id] = h.slice(2).split('|'); if (a && id) openTrip(a, id, ''); }
 }

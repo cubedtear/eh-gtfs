@@ -141,7 +141,9 @@ class Handler(BaseHTTPRequestHandler):
         if not fp.startswith(STATIC + os.sep) or not os.path.isfile(fp):
             return self._send(404, b"not found", "text/plain")
         ctype = mimetypes.guess_type(fp)[0] or "application/octet-stream"
-        if ctype.startswith("text/") or ctype in ("application/javascript", "application/json"):
+        if fp.endswith(".webmanifest"):
+            ctype = "application/manifest+json"
+        if ctype.startswith("text/") or ctype in ("application/javascript", "application/json", "application/manifest+json"):
             ctype += "; charset=utf-8"
         with open(fp, "rb") as f:
             self._send(200, f.read(), ctype, {"Cache-Control": "no-cache"})
