@@ -1,0 +1,19 @@
+# runtime data (downloaded GTFS zips and imported SQLite databases)
+data/
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# editor / OS
+.kiro/
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# local env / logs
+.env
+*.log

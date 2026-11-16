@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Euskadi Transit – live buses &amp; trains</title>
+<meta name="description" content="Live positions and next departures for buses, trains and metro in Euskadi, from Eusko Jaurlaritza open data (GTFS / GTFS-RT).">
+<meta name="theme-color" content="#0b5cab">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230b5cab'/%3E%3Cpath d='M28 30h44a6 6 0 0 1 6 6v26a6 6 0 0 1-6 6H28a6 6 0 0 1-6-6V36a6 6 0 0 1 6-6z' fill='%23fff'/%3E%3Crect x='30' y='38' width='40' height='14' rx='3' fill='%230b5cab'/%3E%3Ccircle cx='36' cy='60' r='3.5' fill='%230b5cab'/%3E%3Ccircle cx='64' cy='60' r='3.5' fill='%230b5cab'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="topbar">
+  <div class="brand"><span class="logo" id="brand-logo" aria-hidden="true"></span><span class="brand-name">Euskadi Transit</span></div>
+  <div class="searchbox">
+    <input id="q" type="search" autocomplete="off" spellcheck="false" aria-label="Search stop or station" data-i18n-ph="search_ph">
+    <ul id="suggest" class="suggest" hidden></ul>
+  </div>
+  <button id="btn-locate" class="icon-btn" data-i18n-title="nearby" title="Nearby stops" aria-label="Nearby stops"></button>
+  <select id="lang" class="lang" aria-label="Language">
+    <option value="en">EN</option><option value="es">ES</option><option value="eu">EU</option>
+  </select>
+</header>
+
+<main id="layout">
+  <section id="panel" aria-live="polite">
+    <nav id="tabs" role="tablist">
+      <button role="tab" data-tab="stops" class="active" data-i18n="tab_stops">Stops</button>
+      <button role="tab" data-tab="live" data-i18n="tab_live">Live map</button>
+      <button role="tab" data-tab="lines" data-i18n="tab_lines">Lines</button>
+      <button role="tab" data-tab="alerts" data-i18n="tab_alerts">Alerts <span id="alert-count" class="badge" hidden></span></button>
+      <button role="tab" data-tab="info" data-i18n="tab_info">Sources</button>
+    </nav>
+    <div id="panel-body"></div>
+    <button id="sheet-handle" class="sheet-handle" aria-label="Expand / collapse panel"><span></span></button>
+  </section>
+  <div id="resizer" role="separator" aria-orientation="vertical" aria-label="Resize panel" tabindex="0" title="Drag to resize (double-click to reset)"></div>
+  <section id="mapwrap">
+    <div id="map" role="application" aria-label="Map"></div>
+    <div id="mapfilter" class="mapfilter"></div>
+    <div id="map-toast" class="toast" hidden></div>
+  </section>
+</main>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
