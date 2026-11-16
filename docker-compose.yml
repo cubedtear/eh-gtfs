@@ -1,15 +1,16 @@
 services:
   transit:
     build: .
-    image: euskadi-transit:latest
-    container_name: euskadi-transit
-    restart: unless-stopped
+    image: ${IMAGE_NAME:-euskadi-transit:latest}
+    container_name: ${CONTAINER_NAME:-euskadi-transit}
+    user: "${APP_UID:-10001}:${APP_GID:-10001}"
+    restart: ${RESTART_POLICY:-unless-stopped}
     ports:
-      - "8000:8000"
+      - "${BIND_ADDRESS:-0.0.0.0}:${HOST_PORT:-8000}:8000"
     volumes:
-      - transit-data:/app/data
+      - ${DATA_PATH:-transit-data}:/app/data   # imported timetables (SQLite); avoids re-importing on restart
     environment:
-      TZ: Europe/Madrid
+      TZ: ${TZ:-Europe/Madrid}
 
 volumes:
   transit-data:
