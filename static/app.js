@@ -40,10 +40,19 @@ const CHIP_MODES = MODES.filter(m => m !== 'ferry');
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const MODE_COLOR = Object.fromEntries(MODES.map(m => [m, cssv('--mode-' + m)]));
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const EH_BOUNDS = [[41.95, -3.45], [43.6, -0.7]];   // Euskal Herria: Euskadi, Nafarroa and Ipar Euskal Herria
+/** The three administrative areas are listed side by side, with the same weight. 'eh' = networks covering several. */
+const REGIONS = ['eus', 'nav', 'ipar', 'eh'];
+const regionName = r => t('region_' + (r || 'eus'));
+/** [region, agencies[]] for every area that has operators, in a fixed order. */
+const byRegion = list => REGIONS.map(r => [r, list.filter(a => (a.region || 'eus') === r)]).filter(([, l]) => l.length);
 const POLL_VEHICLES_MS = 15000;
 const POLL_VIEW_MS = 20000;
 const BUS_MIN_ZOOM = 11;      // buses are hidden below this zoom unless a scope filter is active
 const STOP_MIN_ZOOM = 14;     // bus stops appear from this zoom; rail stations from 11
+
+/** Languages in the order shown in the selectors: Euskara, Español, Français, English. */
+const LANGS = [['eu', 'Euskara'], ['es', 'Español'], ['fr', 'Français'], ['en', 'English']];
 
 const S = {
   lang: localStorage.getItem('lang') || (navigator.language || 'en').slice(0, 2),
@@ -156,11 +165,11 @@ function applyI18n() {
 }
 
 // ───────────────────────────────────────────────────────────── map
-const map = L.map('map', { zoomControl: false, attributionControl: false, renderer: L.canvas({ tolerance: 12 }), tap: true }).setView([43.05, -2.55], 9);
+const map = L.map('map', { zoomControl: false, attributionControl: false, renderer: L.canvas({ tolerance: 12 }), tap: true }).fitBounds(EH_BOUNDS, { animate: false });
 L.control.zoom({ position: 'bottomright' }).addTo(map);   // hidden on phones: pinch instead
 L.control.attribution({ prefix: false }).addTo(map);
 let baseLayers = [];
-const OSM_CREDIT = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://opendata.euskadi.eus/">Open Data Euskadi</a>';
+const OSM_CREDIT = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://opendata.euskadi.eus/">Open Data Euskadi</a>, <a href="https://transport.data.gouv.fr/">transport.data.gouv.fr</a>';
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
 /** "Simple" is Esri's quiet gray canvas (roads and place names only); "Detailed" is the standard OpenStreetMap style. */
 function applyBasemap() {
@@ -604,7 +613,7 @@ function depList(d) {
     const late = it.delay >= 300;
     let tag;
     const dl = Math.abs(it.delay) >= 60 ? `<span class="tag"><span class="${late ? 'late' : ''}">${esc(fmtDelay(it.delay))}</span></span>` : '';
-    if (it.cancelled) tag = `<span class="tag late">${t('cancelled')}</span>`;
+    if (it.cancelled) tag = `<span class="tag late">${t(it.skipped ? 'not_served' : 'cancelled')}</span>`;
     else if (it.rt === 'rt') tag = `<span class="tag live">${t('live')}</span>${dl}`;
     else if (it.rt === 'est') tag = `<span class="tag est">${t('estimated')}</span>${dl}`;
     else tag = `<span class="tag">${t('scheduled')}</span>`;
@@ -620,7 +629,7 @@ function depList(d) {
 // ───────────────────────────────────────────────────────────── alerts
 function alertText(o) {
   if (!o) return '';
-  return o[S.lang] || o['es'] || o['es-ES'] || o['eu'] || o['en'] || Object.values(o).find(Boolean) || '';
+  return o[S.lang] || o['eu'] || o['es'] || o['es-ES'] || o['fr'] || o['en'] || Object.values(o).find(Boolean) || '';
 }
 function alertVisible(a) {
   const f = S.filters;
@@ -733,19 +742,23 @@ function renderLive(soft) {
     <div class="checks" id="ag-checks"></div>
     <div class="checks" style="margin-top:24px">
       <label><input type="checkbox" data-act="opt" data-opt="showStops" ${f.showStops ? 'checked' : ''}><span class="grow">${t('show_stops')}</span></label>
-      <label><input type="checkbox" data-act="opt" data-opt="est" ${f.est ? 'checked' : ''}><span class="grow">${t('show_est')} <span class="muted small">(Euskotren, Lurraldebus)</span></span></label></div></div>`;
+      <label><input type="checkbox" data-act="opt" data-opt="est" ${f.est ? 'checked' : ''}><span class="grow">${t('show_est')} <span class="muted small">${esc(estOperators())}</span></span></label></div></div>`;
   updateLiveCounts();
+}
+/** Names of the operators whose buses/trains are placed on the map without GPS (from their trip updates). */
+function estOperators() {
+  const names = [...new Set(S.vehicles.filter(v => v.est).map(v => v.agency_name.replace(/ \(Lurraldebus\)$/, '')))].sort();
+  return names.length ? '(' + names.join(', ') + ')' : '';
 }
 function updateLiveCounts() {
   const el = $('#ag-checks'); if (!el) return;
   const counts = {};
   S.vehicles.forEach(v => counts[v.agency] = (counts[v.agency] || 0) + 1);
   const list = Object.values(S.agencies).filter(a => a.ready && (a.rt.vehicles || a.rt.trips));
-  const withData = list.filter(a => counts[a.id]).sort((a, b) => a.name.localeCompare(b.name));
-  const without = list.filter(a => !counts[a.id]).sort((a, b) => a.name.localeCompare(b.name));
   const row = (a, n) => `<label><input type="checkbox" data-act="ag" data-id="${esc(a.id)}" ${!S.filters.agencies || S.filters.agencies.has(a.id) ? 'checked' : ''}>
     <span class="grow">${esc(a.name)}</span><span class="small ${n ? 'tag live' : 'muted'}">${n ? n + ' ' + t('live_vehicles') : t('no_rt')}</span></label>`;
-  el.innerHTML = withData.map(a => row(a, counts[a.id])).join('') + without.map(a => row(a, 0)).join('');
+  const sorted = list.slice().sort((a, b) => (counts[b.id] ? 1 : 0) - (counts[a.id] ? 1 : 0) || a.name.localeCompare(b.name));
+  el.innerHTML = byRegion(sorted).map(([r, l]) => `<h3 class="region">${esc(regionName(r))}</h3>` + l.map(a => row(a, counts[a.id] || 0)).join('')).join('');
   const vc = $('#veh-count'); if (vc) vc.textContent = markers.size;
 }
 
@@ -753,7 +766,7 @@ function updateLiveCounts() {
 async function renderLines(body) {
   const ags = Object.values(S.agencies).filter(a => a.ready).sort((a, b) => a.name.localeCompare(b.name));
   if (!S.linesAgency || !S.agencies[S.linesAgency]) S.linesAgency = (ags.find(a => a.id === 'euskotren') || ags[0] || {}).id || '';
-  body.innerHTML = `<select class="field" id="lines-ag" aria-label="${t('pick_agency')}">${ags.map(a => `<option value="${esc(a.id)}"${a.id === S.linesAgency ? ' selected' : ''}>${esc(a.name)}${a.rt.vehicles || a.rt.trips ? ' (' + t('live').toLowerCase() + ')' : ''}</option>`).join('')}</select>
+  body.innerHTML = `<select class="field" id="lines-ag" aria-label="${t('pick_agency')}">${byRegion(ags).map(([r, l]) => `<optgroup label="${esc(regionName(r))}">${l.map(a => `<option value="${esc(a.id)}"${a.id === S.linesAgency ? ' selected' : ''}>${esc(a.name)}${a.rt.vehicles || a.rt.trips ? ' (' + t('live').toLowerCase() + ')' : ''}</option>`).join('')}</optgroup>`).join('')}</select>
     <input type="search" id="lines-q" placeholder="${t('filter_lines')}" autocomplete="off" style="margin:8px 0"><div id="lines-list"><div class="empty">${t('loading')}</div></div>`;
   $('#lines-ag').onchange = e => { S.linesAgency = e.target.value; localStorage.setItem('linesAgency', S.linesAgency); renderLines(body); };
   $('#lines-q').oninput = drawLinesList;
@@ -820,7 +833,7 @@ function installBlock() {
 }
 async function renderInfo(body) {
   body.innerHTML = `<h2>${t('language')}</h2>
-    <div class="seg" role="group" aria-label="${t('language')}">${[['en', 'English'], ['es', 'Español'], ['eu', 'Euskara']].map(([c, n]) =>
+    <div class="seg" role="group" aria-label="${t('language')}">${LANGS.map(([c, n]) =>
       `<button type="button" class="${S.lang === c ? 'on' : ''}" lang="${c}" data-act="lang" data-lang="${c}" aria-pressed="${S.lang === c}">${n}</button>`).join('')}</div>
     ${installBlock()}
     <h2>${t('src_title')}</h2><p class="small muted" style="margin:0 0 8px">${t('src_intro')}</p><div id="info-t"><div class="empty">${t('loading')}</div></div>
@@ -831,8 +844,8 @@ async function renderInfo(body) {
     if (S.view.name !== 'info') return;
     const st = s => s ? `<span class="st ${s.status}">${t('st_' + s.status)}${s.n ? ' ' + s.n : ''}</span>` : '<span class="muted">—</span>';
     $('#info-t').innerHTML = `<table class="src"><tr><th>${t('src_operator')}</th><th>${t('src_veh')}</th><th>${t('src_trips')}</th><th>${t('src_alerts')}</th></tr>` +
-      d.agencies.map(a => `<tr><td>${esc(a.name)}<div class="muted small">${a.ready ? (a.modes || []).map(m => modeSvg(m, 'sm')).join('') + ' ' + esc((a.gtfs_updated || '').slice(0, 16)) : (a.importing ? t('importing') : esc(a.error || ''))}</div>${a.rt.arrivals ? `<div class="muted small">${t('src_arrivals')}: ${st(a.rt.arrivals)}</div>` : ''}</td>
-      <td>${st(a.rt.vehicles)}</td><td>${st(a.rt.trips)}</td><td>${st(a.rt.alerts)}</td></tr>`).join('') + '</table>' +
+      byRegion(d.agencies).map(([r, l]) => `<tr class="region-row"><th colspan="4">${esc(regionName(r))}</th></tr>` + l.map(a => `<tr><td>${esc(a.name)}<div class="muted small">${a.ready ? (a.modes || []).map(m => modeSvg(m, 'sm')).join('') + ' ' + esc((a.gtfs_updated || '').slice(0, 16)) : (a.importing ? t('importing') : esc(a.error || ''))}</div>${a.rt.arrivals ? `<div class="muted small">${t('src_arrivals')}: ${st(a.rt.arrivals)}</div>` : ''}</td>
+      <td>${st(a.rt.vehicles)}</td><td>${st(a.rt.trips)}</td><td>${st(a.rt.alerts)}</td></tr>`).join('')).join('') + '</table>' +
       `<p class="small muted">${t('updated_lbl')} ${clockS(d.time)}</p>`;
   } catch (e) { const el = $('#info-t'); if (el) el.innerHTML = `<div class="empty">${t('error')}</div>`; }
 }
@@ -891,7 +904,7 @@ function pickSuggestion(s) {
 // ───────────────────────────────────────────────────────────── language + theme
 function setLang(code) {
   S.lang = I18N[code] ? code : 'en'; localStorage.setItem('lang', S.lang);
-  const nm = { en: 'English', es: 'Español', eu: 'Euskara' }[S.lang];
+  const nm = Object.fromEntries(LANGS)[S.lang];
   $('#btn-lang').setAttribute('aria-label', t('language') + ': ' + nm); $('#btn-lang').title = t('language');
   $$('#lang-menu [data-lang]').forEach(b => b.setAttribute('aria-checked', b.dataset.lang === S.lang));
   applyI18n(); updateThemeBtn(); renderMapFilter(); render();

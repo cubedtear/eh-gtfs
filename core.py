@@ -1,5 +1,6 @@
 """Core logic: agency registry, GTFS updater, GTFS-RT cache and real-time merging."""
 import bisect
+import gzip
 import json
 import logging
 import math
@@ -8,6 +9,7 @@ import re
 import threading
 import time
 import zlib
+import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -15,6 +17,7 @@ from datetime import datetime
 
 import gtfsrt
 import lurraldebus
+import sources
 import store
 from store import TZ, AgencyDB, candidate_days, haversine, norm, service_midnight
 
@@ -39,9 +42,12 @@ def quote_url(u):
 
 
 def http_get(url, timeout=20):
-    req = urllib.request.Request(quote_url(url), headers=UA)
+    req = urllib.request.Request(quote_url(url), headers=dict(UA, **{"Accept-Encoding": "gzip"}))
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read()
+        raw = r.read()
+        if r.headers.get("Content-Encoding") == "gzip":
+            raw = gzip.decompress(raw)
+        return raw
 
 
 # --------------------------------------------------------------------------- registry
@@ -64,7 +70,8 @@ def load_index():
         idx = json.load(open(path, "rb"))
     new = {}
     for name, files in idx.get("data", {}).items():
-        info = {"name": name, "gtfs": None, "gtfs_stamp": "", "rt": {}, "slug": None}
+        info = {"name": name, "gtfs": None, "gtfs_stamp": "", "rt": {}, "slug": None, "region": "eus",
+                "quirks": {}, "source": "movEuskadi"}
         for f in files:
             fmt, url, fn = f.get("format"), f.get("url", ""), f.get("name", "")
             low = fn.lower()
@@ -84,7 +91,17 @@ def load_index():
                     continue
                 info["rt"][kind] = url
         if info["gtfs"] and info["slug"]:
+            if info["slug"] in store.BBOX_AGENCIES:
+                # national feeds are cropped to Euskal Herria: a new crop re-imports them
+                info["region"] = "eh"
+                info["gtfs_stamp"] += "|bbox=" + ",".join(str(v) for v in store.BBOX)
             new[info["slug"]] = info
+    _merge_agencies(new)
+    return True
+
+
+def _merge_agencies(new):
+    """Add or refresh operators keeping their import state."""
     with _state_lock:
         for slug, info in new.items():
             old = AGENCIES.get(slug)
@@ -94,7 +111,32 @@ def load_index():
             info["imported_stamp"] = old.get("imported_stamp", "") if old else ""
             AGENCIES[slug] = info
             DBS.setdefault(slug, AgencyDB(slug))
-    return True
+
+
+def load_extra_sources(only=None):
+    """Operators outside the MovEuskadi index (see sources.py): resolve their current, possibly keyed, URLs."""
+    new = {}
+    for src in sources.SOURCES:
+        if only and src["slug"] != only:
+            continue
+        res = sources.resolve(src)
+        if not res:
+            log.warning("%s: no URLs available yet", src["slug"])
+            continue
+        rt = {k: v for k, v in res["rt"].items()}
+        new[src["slug"]] = {"name": src["name"], "gtfs": res["gtfs"], "gtfs_stamp": res["stamp"], "rt": rt,
+                            "slug": src["slug"], "region": src["region"], "quirks": dict(src.get("quirks") or {}),
+                            "source": "transport.data.gouv.fr"}
+    if new:
+        _merge_agencies(new)
+    return bool(new)
+
+
+def refresh_source_soon(slug):
+    """A feed answered 401/403 (rotated API key?): resolve its URLs again in the background, rate limited."""
+    if slug in AGENCIES and AGENCIES[slug].get("source") != "movEuskadi" and sources.should_force(slug):
+        log.warning("%s: access denied, resolving its URLs again", slug)
+        threading.Thread(target=load_extra_sources, args=(slug,), daemon=True).start()
 
 
 def _db_stamp(slug):
@@ -113,6 +155,17 @@ def _db_stamp(slug):
         return None
 
 
+def _download(url, dest):
+    req = urllib.request.Request(quote_url(url), headers=UA)
+    with urllib.request.urlopen(req, timeout=120) as r, open(dest + ".part", "wb") as f:
+        while True:
+            chunk = r.read(1 << 20)
+            if not chunk:
+                break
+            f.write(chunk)
+    os.replace(dest + ".part", dest)
+
+
 def update_agency(slug):
     info = AGENCIES[slug]
     if info.get("importing"):
@@ -128,17 +181,20 @@ def update_agency(slug):
         os.makedirs(GTFS_DIR, exist_ok=True)
         zp = os.path.join(GTFS_DIR, slug + ".zip")
         log.info("downloading GTFS %s", slug)
-        req = urllib.request.Request(quote_url(info["gtfs"]), headers=UA)
-        with urllib.request.urlopen(req, timeout=120) as r, open(zp + ".part", "wb") as f:
-            while True:
-                chunk = r.read(1 << 20)
-                if not chunk:
-                    break
-                f.write(chunk)
-        os.replace(zp + ".part", zp)
+        try:
+            _download(info["gtfs"], zp)
+        except urllib.error.HTTPError as e:
+            if e.code not in (401, 403) or info.get("source") == "movEuskadi":
+                raise
+            # the API key probably rotated: resolve the URL again once and retry
+            log.warning("%s: GTFS download denied (HTTP %s), resolving the URL again", slug, e.code)
+            load_extra_sources(slug)
+            info = AGENCIES[slug]
+            _download(info["gtfs"], zp)
         log.info("importing GTFS %s", slug)
         t0 = time.time()
-        ok = store.import_gtfs(zp, os.path.join(store.DB_DIR, slug + ".sqlite"), slug, info["gtfs_stamp"])
+        ok = store.import_gtfs(zp, os.path.join(store.DB_DIR, slug + ".sqlite"), slug, info["gtfs_stamp"],
+                               info.get("quirks"))
         if ok:
             DBS[slug].reload()
             info["ready"] = True
@@ -146,7 +202,7 @@ def update_agency(slug):
             info["error"] = None
             log.info("imported %s in %.1fs", slug, time.time() - t0)
         else:
-            info["error"] = "no stops inside Euskadi"
+            info["error"] = "no stops inside Euskal Herria"
         os.remove(zp)
     except Exception as e:
         log.exception("update of %s failed", slug)
@@ -160,7 +216,13 @@ def updater_loop():
     first = True
     while True:
         try:
-            if load_index():
+            # each registry is independent: one being unreachable never blocks the other
+            for loader in (load_index, load_extra_sources):
+                try:
+                    loader()
+                except Exception:
+                    log.exception("%s failed", loader.__name__)
+            if AGENCIES:
                 slugs = sorted(AGENCIES, key=lambda s: (_db_stamp(s) is not None, s))
                 # mark already-imported ones ready right away so the UI works while others download
                 for s in slugs:
@@ -190,7 +252,7 @@ class Feed:
 _feeds = {}
 
 
-def get_feed(url, ttl=RT_TTL):
+def get_feed(url, ttl=RT_TTL, slug=None):
     f = _feeds.get(url)
     if f is None:
         f = _feeds.setdefault(url, Feed(url))
@@ -205,6 +267,8 @@ def get_feed(url, ttl=RT_TTL):
             f.error = None
         except Exception as e:
             f.error = str(e)[:120]
+            if slug and isinstance(e, urllib.error.HTTPError) and e.code in (401, 403):
+                refresh_source_soon(slug)      # the API key may have rotated
             if f.data is None:
                 f.data = {"timestamp": 0, "trip_updates": [], "vehicles": [], "alerts": []}
         f.fetched = time.time()
@@ -220,7 +284,7 @@ def fix_ts(slug, t):
 
 def feed_for(slug, kind, ttl=RT_TTL):
     url = AGENCIES[slug]["rt"].get(kind)
-    return get_feed(url, ttl) if url else None
+    return get_feed(url, ttl, slug) if url else None
 
 
 def refresh(slugs, kinds):
@@ -284,12 +348,32 @@ def _feed_tu_index(slug):
     if idx and idx[0] is f.data:
         return idx[1]
     out = {}
+    drop_zero = AGENCIES[slug].get("quirks", {}).get("zero_delay_untracked")
     for tu in f.data["trip_updates"]:
         tid = (tu.get("trip") or {}).get("trip_id")
-        if tid:
+        if tid and drop_zero:
+            tu = _drop_untracked(tu)
+        if tid and tu:
             out.setdefault(tid, []).append(tu)
     _tu_cache[slug] = (f.data, out)
     return out
+
+
+def _drop_untracked(tu):
+    """Txik Txak style feeds publish an update for every trip of the day, tracked or not.
+
+    A bus that is really followed has a delay that is never exactly 0 s and is carried along the whole trip
+    (measured on the live feed: 7.1 min on every stop of a late bus). A trip whose every delay is exactly 0 is
+    just the timetable echoed back: it must not be shown as "live" nor produce a vehicle on the map.
+    What such a trip can still carry is real information: stops flagged SKIPPED (roadworks and detours
+    announced in the alerts feed), so those are kept, stripped of their fake times."""
+    if (tu.get("trip") or {}).get("rel") == 3:
+        return tu                      # a cancellation is always information
+    events = [e for s in tu["stus"] for e in (s.get("arr"), s.get("dep")) if e and e.get("delay") is not None]
+    if not events or any(e["delay"] != 0 for e in events):
+        return tu
+    skipped = [{"seq": s.get("seq"), "stop_id": s.get("stop_id"), "rel": 1} for s in tu["stus"] if s.get("rel") == 1]
+    return dict(tu, stus=skipped) if skipped else None
 
 
 _tu_cache = {}
@@ -362,6 +446,12 @@ def effective_times(slug, rows, sdate, tu):
                     a = d if d >= sa else sa + (d - sd)
                 if d is None:
                     d = a if a >= sd else sd + (a - sa)
+                # one of the two events is wildly off while the other is sane (seen: arrival 3.8 h early,
+                # departure on time): trust the sane one
+                if abs(a - sa) > 3 * 3600 >= abs(d - sd):
+                    a = d
+                elif abs(d - sd) > 3 * 3600 >= abs(a - sa):
+                    d = a
                 if abs(a - sa) > 4 * 3600 and abs(d - sd) > 4 * 3600:
                     return [dict(i, arr=i["sched_arr"], dep=i["sched_dep"], src="sched") for i in
                             _plain(rows, mid)], cancelled
@@ -940,8 +1030,8 @@ def _departures(slug, station_id, kind="dep", limit=15, now=None):
                     "trip_id": r["trip_id"], "route_id": r["route_id"], "line": li["line"], "color": li["color"],
                     "text_color": li["text_color"], "mode": li["mode"], "headsign": hs, "sched": sched,
                     "expected": exp, "delay": exp - sched, "rt": src if src != "sched" else None,
-                    "cancelled": cancelled or skipped, "date": d.strftime("%Y%m%d"), "stop_id": r["stop_id"],
-                    "occupancy": occ, "flags": flags})
+                    "cancelled": cancelled or skipped, "skipped": skipped and not cancelled,
+                    "date": d.strftime("%Y%m%d"), "stop_id": r["stop_id"], "occupancy": occ, "flags": flags})
         if len(results) >= limit:
             break
     results.sort(key=lambda x: x["expected"])
@@ -1377,7 +1467,8 @@ def agencies_summary():
             except Exception:
                 pass
         out.append({"id": slug, "name": info["name"], "ready": info["ready"], "importing": info.get("importing"),
-                    "error": info.get("error"), "modes": modes, "rt": rt, "gtfs_updated": info["gtfs_stamp"]})
+                    "error": info.get("error"), "modes": modes, "rt": rt, "gtfs_updated": info["gtfs_stamp"],
+                    "region": info.get("region", "eus")})
     return out
 
 

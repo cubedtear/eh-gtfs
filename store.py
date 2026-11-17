@@ -15,9 +15,10 @@ TZ = ZoneInfo("Europe/Madrid")
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 DB_DIR = os.path.join(DATA_DIR, "db")
 
-# Agencies whose GTFS covers all of Spain: keep only what is inside Euskadi (+ margin).
+# Agencies whose GTFS covers all of Spain: keep only what is inside Euskal Herria (Euskadi, Nafarroa and
+# Iparralde, + margin).
 BBOX_AGENCIES = {"renfe_media", "renfe_cercanias"}
-BBOX = (42.2, -4.0, 43.6, -1.2)  # south, west, north, east
+BBOX = (41.9, -4.0, 43.6, -0.7)  # south, west, north, east
 
 SCHEMA_VERSION = 3
 
@@ -107,7 +108,11 @@ def _fnum(s):
         return None
 
 
-def import_gtfs(zip_path, db_path, slug, source_stamp=""):
+def import_gtfs(zip_path, db_path, slug, source_stamp="", opts=None):
+    """Import a GTFS zip into a SQLite database. opts (per-source quirks):
+    city_in_name: prefix stop names with the town from stops.txt city_name ("Tarnos - 11 novembre 1918"),
+    which is how the other operators of the area name their stops."""
+    opts = opts or {}
     tmp = db_path + ".tmp"
     if os.path.exists(tmp):
         os.remove(tmp)
@@ -128,8 +133,12 @@ def import_gtfs(zip_path, db_path, slug, source_stamp=""):
             continue
         if bbox and (lat is None or lon is None or not (bbox[0] <= lat <= bbox[2] and bbox[1] <= lon <= bbox[3])):
             continue
+        name = (r.get("stop_name") or "").strip()
+        city = (r.get("city_name") or "").strip()
+        if opts.get("city_in_name") and city and not norm(name).startswith(norm(city)):
+            name = "%s - %s" % (city, name)
         stops[sid] = (
-            sid, (r.get("stop_name") or "").strip(), lat, lon,
+            sid, name, lat, lon,
             (r.get("parent_station") or "").strip(), (r.get("stop_code") or "").strip(),
             (r.get("platform_code") or "").strip(),
         )

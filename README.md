@@ -1,7 +1,42 @@
 # Mugitu
 
-Live map + next departures/arrivals for buses, trains, metro and trams in Euskadi, built on the
-Open Data Euskadi (MovEuskadi) GTFS and GTFS-RT feeds.
+Live map + next departures/arrivals for buses, trains, metro and trams across Euskal Herria (Euskadi, Nafarroa and
+Ipar Euskal Herria), built on open GTFS and GTFS-RT feeds. The three areas are handled the same way: every operator
+has a region (`eus`, `nav`, `ipar`) and the UI lists them side by side.
+
+## Data sources
+
+| Area | Source | Operators |
+|---|---|---|
+| Euskadi | Open Data Euskadi / MovEuskadi (`data-index.json`, read by `core.py`) | all of them (Euskotren, Bizkaibus, Lurraldebus, ...) |
+| Ipar Euskal Herria | transport.data.gouv.fr (configured in `sources.py`) | Txik Txak |
+| Nafarroa | no regional operator added yet (only the Renfe stations inside the crop, e.g. Tudela) | - |
+
+Adding an operator outside the MovEuskadi index is one entry in `sources.py` (dataset id, resource ids, region and
+optional quirks). Everything after that (import, real time, UI) is shared.
+
+### API keys (Txik Txak)
+
+The Txik Txak feeds are hosted by Mecatran and need `?apiKey=...`, which may change. No key is stored in the code.
+`sources.py` resolves the URLs from the portal at run time: it asks the dataset API of transport.data.gouv.fr for the
+resources, follows the permanent data.gouv.fr link (a 302 that always points to the publisher's current keyed URL),
+and falls back to the dataset's `original_url` and then to the last URLs that worked (`data/sources.json`).
+They are resolved again every 30 minutes and immediately after a 401/403 from a feed or from the GTFS download
+(at most once every 5 minutes per operator), so a rotated key heals itself.
+
+### Txik Txak real-time quality
+
+The portal's validator reports thousands of errors on this GTFS-RT feed; checked against the live feed:
+
+- The validator's "times must increase" error (E022) and the missing `vehicle_id` are harmless here.
+- The feed publishes an update for every trip of the day, tracked or not. A bus that is really followed has a delay
+  that is never exactly 0 s and stays constant along the trip; about half of the trips have exactly 0 s on every
+  stop, which is just the timetable. Those are not shown as "live" and draw no vehicle; only their SKIPPED stops are
+  kept.
+- SKIPPED stops are mostly real: they match the roadworks/detours of the alerts feed (same stops skipped by every
+  trip of the line). They are shown as "Stop not served", not as a cancelled trip.
+- An arrival/departure pair where one event is hours off and the other is sane (seen: -3.8 h) uses the sane one.
+- There is no vehicle-position feed, so buses are placed from the trip updates and drawn dashed, like Euskotren.
 
 ## Run
 
@@ -19,7 +54,8 @@ index (`data-index.json`) reports a newer timetable. Real-time `.pb` feeds are f
 - Euskotren publishes trip updates but no vehicle positions: train positions are estimated from
   the trip updates and shown with a dashed outline.
 - AlavaBus encodes entity timestamps as local time; `LOCAL_EPOCH` in `core.py` corrects this.
-- Renfe feeds cover all of Spain and are cropped to Euskadi.
+- Renfe feeds cover all of Spain and are cropped to Euskal Herria (a rectangle, so a few stations of neighbouring
+  provinces come with it).
 
 ## Lurraldebus live arrivals
 
@@ -74,7 +110,7 @@ To use another port, change the left number in `ports:`. The container runs as `
 1000:1000); only if you replace the `mugitu-data` volume with a host folder, set them in a `.env` next to the
 compose file to your own ids (the output of `id -u` and `id -g`, e.g. `APP_UID=1000`, `APP_GID=1000`) and make the folder writable by them.
 The container needs outbound HTTPS access to
-opendata.euskadi.eus and, in the browser, the map tile servers. Put a reverse proxy (Caddy, nginx, Traefik) in
+opendata.euskadi.eus, transport.data.gouv.fr, app.mecatran.com and, in the browser, the map tile servers. Put a reverse proxy (Caddy, nginx, Traefik) in
 front for HTTPS if you expose it publicly; installing the app on a phone requires HTTPS.
 
 First publish: GitHub keeps a new package private. After the first workflow run open the repository's

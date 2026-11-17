@@ -336,3 +336,8 @@ table.src th { color: var(--muted); font-weight: 600; }
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; scroll-behavior: auto !important; }
   .leaflet-marker-icon.veh { transition: none; }
 }
+
+/* operators grouped by area (Euskadi, Nafarroa, Ipar Euskal Herria): same weight for each */
+h3.region { font-size: var(--fs-m); font-weight: 700; color: var(--muted); margin: var(--sp-4) 0 var(--sp-1); }
+h3.region:first-child { margin-top: 0; }
+table.src tr.region-row th { text-align: left; padding-top: var(--sp-4); color: var(--text); font-size: var(--fs-m); }
