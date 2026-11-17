@@ -30,12 +30,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Tags: "latest" on master, the short commit SHA on every push, and 1.2.3 / 1.2 for tags like v1.2.3.
-      # The image name is ghcr.io/<owner>/<repo>, lower-cased as the registry requires.
+      # The image name is fixed, ghcr.io/<owner>/mugitu (lower-cased by the action), whatever the repository is called.
       - name: Image name and tags
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/mugitu
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=short

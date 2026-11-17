@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Euskadi Transit Board - local web server (static UI + JSON API over GTFS / GTFS-RT).
+"""Mugitu - local web server (static UI + JSON API over GTFS / GTFS-RT).
 
 Run:  python3 server.py [--port 8000] [--host 127.0.0.1]
 Only the Python 3.9+ standard library is required.
@@ -38,6 +38,10 @@ def api(path, q):
         core.refresh(list(core.AGENCIES), ["vehicles", "trips", "alerts"]) if _s(q, "probe") else None
         return {"time": int(time.time()), "agencies": core.agencies_summary()}
     if path == "/api/vehicles":
+        # optional s,w,n,e = map area currently showing buses: tells the Lurraldebus tracker what to cover
+        view = [_f(q, k) for k in ("s", "w", "n", "e")]
+        if None not in view:
+            core.lb_note_view(*view)
         return core.vehicles()
     if path == "/api/search":
         r = core.search_all(_s(q, "q"))
@@ -63,8 +67,9 @@ def api(path, q):
         res = core.departures(slug, sid, kind, int(_f(q, "limit", 15)))
         info = core.AGENCIES[slug]
         trips_stat = core.feed_stats(slug, "trips") if info["rt"].get("trips") else {"status": "none"}
+        rt_status = core.lb_status(res or []) if core.is_lb(slug) else trips_stat["status"]
         return {"station": dict(st, agency=slug, agency_name=info["name"]), "kind": kind,
-                "time": int(time.time()), "items": res or [], "rt_status": trips_stat["status"],
+                "time": int(time.time()), "items": res or [], "rt_status": rt_status,
                 "alerts": [a for a in core.alerts(slug) if _alert_applies(a, slug, sid, res or [])]}
     if path == "/api/trip":
         slug = _s(q, "agency")
@@ -98,7 +103,7 @@ def _alert_applies(a, slug, station_id, items):
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
-    server_version = "EuskadiTransit/1.0"
+    server_version = "Mugitu/1.0"
 
     def log_message(self, fmt, *args):
         if os.environ.get("DEBUG_HTTP"):
@@ -156,6 +161,7 @@ def main():
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     threading.Thread(target=core.updater_loop, daemon=True).start()
+    threading.Thread(target=core.lb_tracker_loop, daemon=True).start()
     srv = ThreadingHTTPServer((a.host, a.port), Handler)
     srv.daemon_threads = True
     print("Serving on http://%s:%d" % (a.host, a.port))

@@ -1,7 +1,7 @@
 # Override that builds the image from this checkout instead of pulling it from GitHub:
 #   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 services:
-  transit:
+  mugitu:
     build: .
-    image: euskadi-transit:local
+    image: mugitu:local
     pull_policy: never

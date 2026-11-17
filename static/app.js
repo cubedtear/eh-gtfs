@@ -1,5 +1,5 @@
 'use strict';
-/* Euskadi Transit – front-end. Talks to the local server's /api/* endpoints. */
+/* Mugitu – front-end. Talks to the local server's /api/* endpoints. */
 
 // ───────────────────────────────────────────────────────────── icons (inline SVG, Material-style)
 const P = d => `<path d="${d}"/>`;
@@ -29,6 +29,7 @@ const ICONS = {
   search: P('M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'),
   link: P('M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z'),
   car: P('M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 12.2c-2.1 0-3.9-1.1-5-2.7.03-1.65 3.3-2.55 5-2.55s4.97.9 5 2.55c-1.1 1.6-2.9 2.7-5 2.7z'),
+  person: P('M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'),
 };
 const ic = (name, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">${ICONS[name] || ''}</svg>`;
 
@@ -120,6 +121,10 @@ function fmtDelay(sec) {
   if (Math.abs(sec) < 60) return t('on_time');
   return (m > 0 ? '+' : '−') + Math.abs(m) + ' ' + t('min') + ' ' + (m > 0 ? t('late') : t('early'));
 }
+/** Passengers on board, as reported by Lurraldebus. */
+const occChip = n => n == null ? '' : `<span class="occ" title="${esc(t('occupancy_hint'))}">${ic('person', 'xs')}<span class="num">${esc(n)}</span><span class="sr-only"> ${esc(t('occupancy'))}</span></span>`;
+const FLAGS = ['drop_off_only', 'pick_up_only'];
+const flagTags = fl => (fl || []).filter(f => FLAGS.includes(f)).map(f => `<span class="tag flag">${t('flag_' + f)}</span>`).join('');
 
 function lum(hex) {
   const n = parseInt(hex, 16); const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
@@ -322,6 +327,7 @@ function vehCardInner(v) {
       ${v.delay != null ? `<span class="tag ${late ? 'late' : v.delay < 60 ? 'live' : ''}"><b>${esc(fmtDelay(v.delay))}</b></span>` : ''}</div>
     ${v.stop ? `<div class="kv"><span class="muted">${stat}</span><b>${esc(v.stop)}</b></div>` : ''}
     ${v.speed != null ? `<div class="kv"><span class="muted">${t('speed')}</span><b>${v.speed} km/h</b></div>` : ''}
+    ${v.occupancy != null ? `<div class="kv"><span class="muted">${t('occupancy')}</span><b>${occChip(v.occupancy)}</b></div>` : ''}
     ${v.ts ? `<div class="muted small" style="margin-top:4px">${updatedAgo(v.ts)}</div>` : ''}
     <div class="muted small" style="margin-top:4px">${v.est ? t('position_est') : t('position_gps')}</div>`;
 }
@@ -356,11 +362,23 @@ function vehActions(v) {
 }
 
 let vehBusy = false;
+/** Map area to cover with live bus data: only sent while buses are actually shown (keeps Lurraldebus requests down). */
+function vehicleView() {
+  if (!S.filters.modes.has('bus') || busesHidden()) return undefined;
+  const b = map.getBounds();
+  const r = x => x.toFixed(3);
+  return { s: r(b.getSouth()), w: r(b.getWest()), n: r(b.getNorth()), e: r(b.getEast()) };
+}
+let lastPoll = 0, moveTimer;
+map.on('moveend', () => {   // a new area should not wait for the 15 s poll to start being tracked
+  clearTimeout(moveTimer);
+  moveTimer = setTimeout(() => { if (Date.now() - lastPoll > 5000) pollVehicles(); }, 1200);
+});
 async function pollVehicles() {
   if (vehBusy || document.hidden) return;
-  vehBusy = true;
+  vehBusy = true; lastPoll = Date.now();
   try {
-    const d = await api('vehicles');
+    const d = await api('vehicles', vehicleView());
     S.skew = d.time - Date.now() / 1000;
     S.vehicles = d.vehicles; S.feeds = d.feeds;
     drawVehicles();
@@ -574,7 +592,7 @@ function rtNotice(status, items) {
   const anyRt = (items || []).some(i => i.rt);
   if (status === 'live' && anyRt) return `<div class="notice ok small">${t('rt_live')}</div>`;
   if (status === 'live') return '';
-  const key = { none: 'rt_none', empty: 'rt_empty', stale: 'rt_stale', error: 'rt_error', unknown: 'rt_empty' }[status] || 'rt_none';
+  const key = { none: 'rt_none', empty: 'rt_empty', stale: 'rt_stale', error: 'rt_error', unknown: 'rt_empty', lb_none: 'rt_lb_none' }[status] || 'rt_none';
   return `<div class="notice warn small">${t(key)}</div>`;
 }
 function depList(d) {
@@ -590,6 +608,8 @@ function depList(d) {
     else if (it.rt === 'rt') tag = `<span class="tag live">${t('live')}</span>${dl}`;
     else if (it.rt === 'est') tag = `<span class="tag est">${t('estimated')}</span>${dl}`;
     else tag = `<span class="tag">${t('scheduled')}</span>`;
+    tag += flagTags(it.flags);
+    if (it.occupancy != null) tag += occChip(it.occupancy);
     const second = mins < 60 && mins >= 1 ? `<div class="muted small">${clock(it.expected)}</div>` : (Math.abs(it.delay) >= 60 ? `<div class="muted small">${t('sched_short')} ${clock(it.sched)}</div>` : '');
     return `<div class="dep${it.cancelled ? ' cancelled' : ''}" data-act="trip" data-agency="${esc(S.view.agency)}" data-trip="${esc(it.trip_id)}" data-date="${esc(it.date)}">
       ${badge(it)}<div class="grow"><div class="dest ellipsis">${esc(it.headsign || it.line)}</div><div class="tags">${tag}</div></div>
@@ -713,7 +733,7 @@ function renderLive(soft) {
     <div class="checks" id="ag-checks"></div>
     <div class="checks" style="margin-top:24px">
       <label><input type="checkbox" data-act="opt" data-opt="showStops" ${f.showStops ? 'checked' : ''}><span class="grow">${t('show_stops')}</span></label>
-      <label><input type="checkbox" data-act="opt" data-opt="est" ${f.est ? 'checked' : ''}><span class="grow">${t('show_est')} <span class="muted small">(Euskotren)</span></span></label></div></div>`;
+      <label><input type="checkbox" data-act="opt" data-opt="est" ${f.est ? 'checked' : ''}><span class="grow">${t('show_est')} <span class="muted small">(Euskotren, Lurraldebus)</span></span></label></div></div>`;
   updateLiveCounts();
 }
 function updateLiveCounts() {
@@ -811,7 +831,7 @@ async function renderInfo(body) {
     if (S.view.name !== 'info') return;
     const st = s => s ? `<span class="st ${s.status}">${t('st_' + s.status)}${s.n ? ' ' + s.n : ''}</span>` : '<span class="muted">—</span>';
     $('#info-t').innerHTML = `<table class="src"><tr><th>${t('src_operator')}</th><th>${t('src_veh')}</th><th>${t('src_trips')}</th><th>${t('src_alerts')}</th></tr>` +
-      d.agencies.map(a => `<tr><td>${esc(a.name)}<div class="muted small">${a.ready ? (a.modes || []).map(m => modeSvg(m, 'sm')).join('') + ' ' + esc((a.gtfs_updated || '').slice(0, 16)) : (a.importing ? t('importing') : esc(a.error || ''))}</div></td>
+      d.agencies.map(a => `<tr><td>${esc(a.name)}<div class="muted small">${a.ready ? (a.modes || []).map(m => modeSvg(m, 'sm')).join('') + ' ' + esc((a.gtfs_updated || '').slice(0, 16)) : (a.importing ? t('importing') : esc(a.error || ''))}</div>${a.rt.arrivals ? `<div class="muted small">${t('src_arrivals')}: ${st(a.rt.arrivals)}</div>` : ''}</td>
       <td>${st(a.rt.vehicles)}</td><td>${st(a.rt.trips)}</td><td>${st(a.rt.alerts)}</td></tr>`).join('') + '</table>' +
       `<p class="small muted">${t('updated_lbl')} ${clockS(d.time)}</p>`;
   } catch (e) { const el = $('#info-t'); if (el) el.innerHTML = `<div class="empty">${t('error')}</div>`; }

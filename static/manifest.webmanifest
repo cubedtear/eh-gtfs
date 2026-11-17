@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Euskadi Transit",
-  "short_name": "Euskadi Transit",
+  "name": "Mugitu",
+  "short_name": "Mugitu",
   "description": "Live map and next departures for buses, trains, metro and trams in Euskadi.",
   "start_url": "/?source=pwa",
   "scope": "/",

@@ -1,4 +1,4 @@
-/* Euskadi Transit. A tool screen: neutral ink for chrome, colour reserved for transport modes and live state.
+/* Mugitu. A tool screen: neutral ink for chrome, colour reserved for transport modes and live state.
    Every colour, face and size comes from the tokens below. */
 :root {
   color-scheme: light;
@@ -266,6 +266,11 @@ input[type=text], input[type=search], select.field {
 .tag.est { color: var(--warn); font-weight: 700; }
 .tag.late, .late { color: var(--bad); }
 .tag .late { font-weight: 700; }
+.tag.flag { color: var(--text); background: var(--surface-2); border-radius: var(--r-sm); padding: 0 var(--sp-2); }
+.occ { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-s); color: var(--muted); }
+.occ .ic { width: 14px; height: 14px; margin: 0; vertical-align: 0; }
+.kv .occ { font-size: inherit; color: inherit; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .seg { display: flex; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); }
 .seg button { flex: 1; min-height: 44px; padding: 0 var(--sp-3); background: none; border: 0; color: var(--muted); font-weight: 600; }
 .seg button.on { background: var(--ink); color: var(--ink-text); }
@@ -274,7 +279,7 @@ input[type=text], input[type=search], select.field {
 .tl { list-style: none; margin: 0; padding: 0 0 0 var(--sp-5); position: relative; }
 .tl::before { content: ""; position: absolute; left: 7px; top: 24px; bottom: 24px; width: 4px; background: var(--c, var(--ink)); opacity: .35; border-radius: 2px; }
 .tl li { position: relative; padding: var(--sp-3) 0 var(--sp-3) var(--sp-2); min-height: 48px; display: flex; gap: var(--sp-2); align-items: center; cursor: pointer; border-bottom: 1px solid var(--line); }
-.tl li::before { content: ""; position: absolute; left: -22px; top: 50%; margin-top: -7px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 3px solid var(--c, var(--ink)); }
+.tl li::before { content: ""; box-sizing: border-box; position: absolute; left: -22px; top: 50%; margin-top: -7px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 3px solid var(--c, var(--ink)); }
 .tl li.past { opacity: .5; }
 .tl li.here { font-weight: 700; }
 .tl li.here::before { background: var(--c, var(--ink)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c, var(--ink)) 28%, transparent); }
