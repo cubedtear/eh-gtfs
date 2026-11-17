@@ -5,6 +5,7 @@ services:
     image: ghcr.io/josuloo99/mugitu:latest
     pull_policy: always
     container_name: mugitu
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
     restart: unless-stopped
     ports:
       - "8000:8000"          # change the left number to publish on another port

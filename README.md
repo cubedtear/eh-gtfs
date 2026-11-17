@@ -70,7 +70,10 @@ needed):
     docker compose pull && docker compose up -d    # update to the latest image
 
 The first start imports all timetables (about a minute); they are kept in the `mugitu-data` volume.
-To use another port, change the left number in `ports:`. The container needs outbound HTTPS access to
+To use another port, change the left number in `ports:`. The container runs as `APP_UID:APP_GID` (default
+1000:1000); only if you replace the `mugitu-data` volume with a host folder, set them in a `.env` next to the
+compose file to your own ids (the output of `id -u` and `id -g`, e.g. `APP_UID=1000`, `APP_GID=1000`) and make the folder writable by them.
+The container needs outbound HTTPS access to
 opendata.euskadi.eus and, in the browser, the map tile servers. Put a reverse proxy (Caddy, nginx, Traefik) in
 front for HTTPS if you expose it publicly; installing the app on a phone requires HTTPS.
 
