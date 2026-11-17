@@ -839,15 +839,49 @@ def lb_tracker_loop():
 
 # --------------------------------------------------------------------------- departures
 
+def lb_peers(slug, station_id):
+    """[slug] plus the other Lurraldebus operators that serve the same physical stop (same id, same place).
+
+    The seven operators share one stop id space, so a stop like 1713 (Tolosa, Zezen Plaza) exists in
+    Tolosaldea, Tbh and Guipuzkoana; it is one station for the user."""
+    if not is_lb(slug):
+        return [slug]
+    st = DBS[slug].station(station_id)
+    out = [slug]
+    for s in lb_slugs():
+        if s != slug and st:
+            o = DBS[s].station(station_id)
+            if o and haversine(st["lat"], st["lon"], o["lat"], o["lon"]) < 100:
+                out.append(s)
+    return out
+
+
 def departures(slug, station_id, kind="dep", limit=15, now=None):
     """Next calls at a station, with real-time data merged in. Lurraldebus stops are refreshed from
-    lurraldebus.eus first (cached, shared and rate limited) when something is due in the next hour or so."""
-    res = _departures(slug, station_id, kind, limit, now)
+    lurraldebus.eus first (cached, shared and rate limited) when something is due in the next hour or so,
+    and include the services of every Lurraldebus operator calling at the same stop."""
+    peers = lb_peers(slug, station_id)
+    res = _departures_merged(peers, station_id, kind, limit, now)
     if res and is_lb(slug) and not now:
         t = time.time()
         if res[0]["expected"] - t < 75 * 60 and lb_refresh_station(DBS[slug].station_stops(station_id)):
-            res = _departures(slug, station_id, kind, limit, now)
+            res = _departures_merged(peers, station_id, kind, limit, now)
     return res
+
+
+def _departures_merged(slugs, station_id, kind, limit, now):
+    out, found = [], False
+    for s in slugs:
+        r = _departures(s, station_id, kind, limit, now)
+        if r is not None:
+            found = True
+        for it in r or []:
+            it["agency"] = s
+            out.append(it)
+    if not found:
+        return None
+    out.sort(key=lambda x: x["expected"])
+    return out[:limit]
 
 
 def _departures(slug, station_id, kind="dep", limit=15, now=None):
@@ -1239,12 +1273,17 @@ def search_stations(q, limit=40, lat=None, lon=None):
     if len(qn) < 2:
         return []
     res = []
+    shared = set()      # a Lurraldebus stop served by several operators is one result
     for slug, info in AGENCIES.items():
         if not info["ready"]:
             continue
         try:
             for r in DBS[slug].q("SELECT station_id, name, lat, lon, modes FROM stations WHERE name_norm LIKE ? LIMIT 60",
                                  (_like(qn),)):
+                if is_lb(slug):
+                    if r["station_id"] in shared:
+                        continue
+                    shared.add(r["station_id"])
                 n = norm(r["name"])
                 rank = 0 if n == qn else 1 if n.startswith(qn) else 2
                 res.append({"agency": slug, "agency_name": info["name"], "station_id": r["station_id"],
@@ -1260,13 +1299,19 @@ def search_stations(q, limit=40, lat=None, lon=None):
 
 def stations_in_bbox(s, w, n, e, limit=600, rail_only=False):
     res = []
+    shared = set()      # Lurraldebus stops are listed once, however many operators serve them
     for slug, info in AGENCIES.items():
         if not info["ready"]:
             continue
+        lb = is_lb(slug)
         for r in DBS[slug].q("SELECT station_id, name, lat, lon, modes FROM stations WHERE lat BETWEEN ? AND ? "
                              "AND lon BETWEEN ? AND ?", (s, n, w, e)):
             if rail_only and not (set((r["modes"] or "").split(",")) - {"bus", ""}):
                 continue
+            if lb:
+                if r["station_id"] in shared:
+                    continue
+                shared.add(r["station_id"])
             res.append({"agency": slug, "station_id": r["station_id"], "name": r["name"], "lat": r["lat"],
                         "lon": r["lon"], "modes": r["modes"]})
     return res[:limit * 3]

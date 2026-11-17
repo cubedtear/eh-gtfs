@@ -611,7 +611,7 @@ function depList(d) {
     tag += flagTags(it.flags);
     if (it.occupancy != null) tag += occChip(it.occupancy);
     const second = mins < 60 && mins >= 1 ? `<div class="muted small">${clock(it.expected)}</div>` : (Math.abs(it.delay) >= 60 ? `<div class="muted small">${t('sched_short')} ${clock(it.sched)}</div>` : '');
-    return `<div class="dep${it.cancelled ? ' cancelled' : ''}" data-act="trip" data-agency="${esc(S.view.agency)}" data-trip="${esc(it.trip_id)}" data-date="${esc(it.date)}">
+    return `<div class="dep${it.cancelled ? ' cancelled' : ''}" data-act="trip" data-agency="${esc(it.agency || S.view.agency)}" data-trip="${esc(it.trip_id)}" data-date="${esc(it.date)}">
       ${badge(it)}<div class="grow"><div class="dest ellipsis">${esc(it.headsign || it.line)}</div><div class="tags">${tag}</div></div>
       <div class="when"><div class="big${mins < 3 && !it.cancelled ? ' soon' : ''}">${big}</div>${second}</div></div>`;
   }).join('');

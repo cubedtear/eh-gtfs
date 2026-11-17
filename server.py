@@ -66,11 +66,14 @@ def api(path, q):
         kind = "arr" if _s(q, "kind") == "arr" else "dep"
         res = core.departures(slug, sid, kind, int(_f(q, "limit", 15)))
         info = core.AGENCIES[slug]
+        peers = core.lb_peers(slug, sid)
         trips_stat = core.feed_stats(slug, "trips") if info["rt"].get("trips") else {"status": "none"}
         rt_status = core.lb_status(res or []) if core.is_lb(slug) else trips_stat["status"]
-        return {"station": dict(st, agency=slug, agency_name=info["name"]), "kind": kind,
+        names = " · ".join(core.AGENCIES[p]["name"] for p in peers)
+        modes = ",".join(sorted({m for p in peers for m in (core.DBS[p].station(sid)["modes"] or "").split(",") if m}))
+        return {"station": dict(st, agency=slug, agency_name=names, modes=modes or st["modes"]), "kind": kind,
                 "time": int(time.time()), "items": res or [], "rt_status": rt_status,
-                "alerts": [a for a in core.alerts(slug) if _alert_applies(a, slug, sid, res or [])]}
+                "alerts": [a for p in peers for a in core.alerts(p) if _alert_applies(a, p, sid, [i for i in (res or []) if i["agency"] == p])]}
     if path == "/api/trip":
         slug = _s(q, "agency")
         if slug not in core.DBS:
