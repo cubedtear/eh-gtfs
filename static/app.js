@@ -703,8 +703,7 @@ async function renderTrip(body) {
       const cls = (i < idx || idx < 0 ? 'past' : '') + (i === idx ? ' here' : '') + (s.skipped ? ' skipped' : '');
       return `<li class="${cls}" data-act="station" data-agency="${esc(d.agency)}" data-id="${esc(s.station_id)}" data-lat="${s.lat}" data-lon="${s.lon}">
         <div class="grow nm">${esc(s.name)}</div>
-        <div class="tm"><b>${clock(s.expected)}</b>${Math.abs(dl) >= 60 ? `<div class="small ${dl >= 300 ? 'tag late' : 'muted'}">${t('sched_short')} ${clock(s.sched)}</div>` : ''}
-        ${s.rt === 'rt' ? '<div class="tag live small"><span class="d"></span></div>' : ''}</div></li>`;
+        <div class="tm"><b>${clock(s.expected)}</b>${Math.abs(dl) >= 60 ? `<div class="small ${dl >= 300 ? 'late' : 'muted'}">${t('sched_short')} ${clock(s.sched)}</div>` : ''}</div></li>`;
     }).join('') + '</ul>';
     h += refreshRow(`${t('updated_lbl')} ${clockS(now)}`);
     const keep = body.scrollTop;

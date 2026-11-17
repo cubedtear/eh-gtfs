@@ -254,7 +254,7 @@ input[type=text], input[type=search], select.field {
 
 /* departures */
 .dep .when { text-align: right; min-width: 72px; flex: none; }
-.dep .when .small, .tl .tm .small { margin-top: var(--sp-2); line-height: 1.2; }
+.dep .when .small { margin-top: var(--sp-2); line-height: 1.2; }
 .dep .big { font-size: var(--fs-xl); font-weight: 700; line-height: 1.1; }
 .dep .big.soon { color: var(--good); }
 .dep.cancelled { opacity: .6; }
@@ -277,14 +277,16 @@ input[type=text], input[type=search], select.field {
 
 /* trip / route timeline */
 .tl { list-style: none; margin: 0; padding: 0 0 0 var(--sp-5); position: relative; }
-.tl::before { content: ""; position: absolute; left: 7px; top: 24px; bottom: 24px; width: 4px; background: var(--c, var(--ink)); opacity: .35; border-radius: 2px; }
-.tl li { position: relative; padding: var(--sp-3) 0 var(--sp-3) var(--sp-2); min-height: 48px; display: flex; gap: var(--sp-2); align-items: center; cursor: pointer; border-bottom: 1px solid var(--line); }
+.tl::before { content: ""; position: absolute; left: 7px; top: 20px; bottom: 20px; width: 4px; background: var(--c, var(--ink)); opacity: .35; border-radius: 2px; }
+.tl li { position: relative; padding: var(--sp-2) 0 var(--sp-2) var(--sp-2); min-height: 40px; display: flex; gap: var(--sp-2); align-items: center; cursor: pointer; border-bottom: 1px solid var(--line); }
 .tl li::before { content: ""; box-sizing: border-box; position: absolute; left: -22px; top: 50%; margin-top: -7px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 3px solid var(--c, var(--ink)); }
 .tl li.past { opacity: .5; }
 .tl li.here { font-weight: 700; }
 .tl li.here::before { background: var(--c, var(--ink)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c, var(--ink)) 28%, transparent); }
 .tl li.skipped .nm { text-decoration: line-through; }
-.tl .tm { text-align: right; flex: none; }
+.tl .tm { text-align: right; flex: none; line-height: 1.2; }
+.tl .tm .small { margin-top: 1px; line-height: 1.15; }
+.tl .nm { line-height: 1.25; }
 
 /* vehicle card, alerts, key/value */
 .card { color: var(--text); background: var(--surface-2); border-radius: var(--r-md); padding: var(--sp-3); margin: var(--sp-3) 0; }
