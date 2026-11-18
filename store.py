@@ -4,6 +4,7 @@ import io
 import json
 import math
 import os
+import re
 import sqlite3
 import threading
 import unicodedata
@@ -108,6 +109,12 @@ def _fnum(s):
         return None
 
 
+def _tidy(s):
+    """Trim and remove the column padding some feeds (Renfe) put inside names: 'Abando      -Muskiz'."""
+    s = re.sub(r"\s{2,}-", "-", (s or "").strip())
+    return re.sub(r"\s{2,}", " ", s)
+
+
 def import_gtfs(zip_path, db_path, slug, source_stamp="", opts=None):
     """Import a GTFS zip into a SQLite database. opts (per-source quirks):
     city_in_name: prefix stop names with the town from stops.txt city_name ("Tarnos - 11 novembre 1918"),
@@ -155,7 +162,7 @@ def import_gtfs(zip_path, db_path, slug, source_stamp="", opts=None):
         rtype = (r.get("route_type") or "3").strip()
         db.execute(
             "INSERT OR REPLACE INTO routes VALUES(?,?,?,?,?,?,?)",
-            (rid, (r.get("route_short_name") or "").strip(), (r.get("route_long_name") or "").strip(),
+            (rid, (r.get("route_short_name") or "").strip(), _tidy(r.get("route_long_name")),
              int(rtype) if rtype.isdigit() else 3, mode_of(rtype),
              (r.get("route_color") or "").strip(), (r.get("route_text_color") or "").strip()))
 
@@ -205,6 +212,10 @@ def import_gtfs(zip_path, db_path, slug, source_stamp="", opts=None):
         db.executemany("INSERT OR REPLACE INTO stop_times VALUES(?,?,?,?,?)", batch)
     db.execute("CREATE INDEX st_stop ON stop_times(stop_id, dep)")
     db.execute("CREATE INDEX trips_route ON trips(route_id)")
+    if bbox:
+        # Renfe leaves trip_headsign empty: use the name of the last stop the trip calls at
+        db.execute("UPDATE trips SET headsign=COALESCE((SELECT s.name FROM stop_times st JOIN stops s ON s.stop_id=st.stop_id "
+                   "WHERE st.tix=trips.tix ORDER BY st.seq DESC LIMIT 1), '') WHERE headsign=''")
 
     # calendar
     rd = _reader(z, "calendar.txt")

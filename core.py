@@ -96,13 +96,19 @@ def load_index():
                     continue
                 info["rt"][kind] = url
         if info["gtfs"] and info["slug"]:
+            if sources.replaced_in_index(info["slug"]):
+                continue                    # that operator is read straight from its publisher (sources.py)
             if info["slug"] in store.BBOX_AGENCIES:
-                # national feeds are cropped to Euskal Herria: a new crop re-imports them
                 info["region"] = "eh"
-                info["gtfs_stamp"] += "|bbox=" + ",".join(str(v) for v in store.BBOX)
+                info["gtfs_stamp"] = crop_stamp(info["gtfs_stamp"])
             new[info["slug"]] = info
     _merge_agencies(new)
     return True
+
+
+def crop_stamp(stamp):
+    """National feeds are cropped to Euskal Herria: a new crop (or importer change) re-imports them."""
+    return stamp + "|bbox=" + ",".join(str(v) for v in store.BBOX) + "|tidy2"
 
 
 def _merge_agencies(new):
@@ -129,9 +135,10 @@ def load_extra_sources(only=None):
             log.warning("%s: no URLs available yet", src["slug"])
             continue
         rt = {k: v for k, v in res["rt"].items()}
-        new[src["slug"]] = {"name": src["name"], "gtfs": res["gtfs"], "gtfs_stamp": res["stamp"], "rt": rt,
+        stamp = crop_stamp(res["stamp"]) if src["slug"] in store.BBOX_AGENCIES else res["stamp"]
+        new[src["slug"]] = {"name": src["name"], "gtfs": res["gtfs"], "gtfs_stamp": stamp, "rt": rt,
                             "slug": src["slug"], "region": src["region"], "quirks": dict(src.get("quirks") or {}),
-                            "source": "transport.data.gouv.fr"}
+                            "source": "renfe.com" if src.get("gtfs_url") else "transport.data.gouv.fr"}
     if new:
         _merge_agencies(new)
     return bool(new)
@@ -297,6 +304,59 @@ def refresh(slugs, kinds):
     list(_pool.map(lambda a: feed_for(*a), jobs))
 
 
+# ---- national feeds (Renfe): keep only what concerns the area the timetable was cropped to
+
+_region_cache = {}
+
+
+def is_national(slug):
+    return slug in store.BBOX_AGENCIES
+
+
+def region_ids(slug):
+    """(stop ids, route ids that call at a stop) inside the cropped area of a national operator."""
+    db = DBS[slug]
+    key = (slug, db.version)
+    if key not in _region_cache:
+        stops = {r[0] for r in db.q("SELECT stop_id FROM stops")}
+        # a line only matters here if a trip calls at two or more stops inside the crop
+        routes = {r[0] for r in db.q("SELECT DISTINCT t.route_id FROM trips t "
+                                     "WHERE (SELECT COUNT(*) FROM stop_times s WHERE s.tix=t.tix) >= 2")}
+        _region_cache.clear()
+        _region_cache[key] = (stops, routes)
+    return _region_cache[key]
+
+
+def in_region_pos(v):
+    b = store.BBOX
+    return b[0] <= v.get("lat", 0) <= b[2] and b[1] <= v.get("lon", 0) <= b[3]
+
+
+def region_trip_update(slug, tu):
+    stops, _ = region_ids(slug)
+    return any(s.get("stop_id") in stops for s in tu["stus"])
+
+
+def region_alert(slug, a):
+    stops, routes = region_ids(slug)
+    return any(e.get("route_id") in routes or e.get("stop_id") in stops for e in a.get("entities") or [])
+
+
+def region_items(slug, kind, items):
+    """Entities of a feed that concern the area: everything for regional operators, a subset for national ones."""
+    if not is_national(slug) or slug not in DBS:
+        return items
+    try:
+        if kind == "vehicles":
+            return [v for v in items if in_region_pos(v)]
+        if kind == "trips":
+            return [t for t in items if region_trip_update(slug, t)]
+        return [a for a in items if region_alert(slug, a)]
+    except Exception:
+        log.exception("region filter failed for %s", slug)
+        return items
+
+
 def feed_stats(slug, kind):
     """Return dict(n, age, status) for an agency feed (already cached)."""
     url = AGENCIES[slug]["rt"].get(kind)
@@ -306,7 +366,7 @@ def feed_stats(slug, kind):
     if not f or not f.data:
         return {"status": "unknown", "n": 0}
     key = {"vehicles": "vehicles", "trips": "trip_updates", "alerts": "alerts"}[kind]
-    n = len(f.data[key])
+    n = len(region_items(slug, kind, f.data[key])) if is_national(slug) and f.data[key] else len(f.data[key])
     ts = f.data["timestamp"]  # header timestamps are true UTC even for skewed feeds
     age = int(time.time() - ts) if ts else None
     if f.error and n == 0:
@@ -1326,7 +1386,7 @@ def _build_vehicles():
         feeds[slug] = {"name": info["name"], "vehicles": vs, "trips": ts}
         tus = tu_index(slug) if ts["status"] in ("live", "stale") or is_lb(slug) else {}
         vf = feed_for(slug, "vehicles")
-        vlist = vf.data["vehicles"] if vf and vf.data and vs["status"] in ("live", "stale") else []
+        vlist = region_items(slug, "vehicles", vf.data["vehicles"]) if vf and vf.data and vs["status"] in ("live", "stale") else []
         try:
             for v in vlist:
                 if not v.get("lat") or not v.get("lon") or abs(v["lat"]) < 1:
@@ -1349,7 +1409,7 @@ def _build_vehicles():
                 vid = (v.get("vehicle") or {})
                 out.append({
                     "id": "%s:%s" % (slug, vid.get("id") or v["id"]), "agency": slug, "agency_name": info["name"],
-                    "label": vid.get("label") or vid.get("id") or "", "lat": round(v["lat"], 6),
+                    "label": re.sub(r"-PLATF\.\(\d+\)$", "", vid.get("label") or vid.get("id") or ""), "lat": round(v["lat"], 6),
                     "lon": round(v["lon"], 6), "bearing": v.get("bearing"),
                     "speed": round(v["speed"] * 3.6) if v.get("speed") is not None else None,
                     "route_id": route_id, "line": li["line"], "color": li["color"], "text_color": li["text_color"],
@@ -1464,15 +1524,51 @@ def route_detail(slug, route_id):
                        "stops": st})
         if len(seen_dirs) >= 2:
             break
+    r = db.routes().get(route_id)
+    if r and not li["long"]:
+        li["long"] = route_long(slug, r)
     return dict(li, route_id=route_id, agency=slug, shapes=shapes)
+
+
+_route_names = {}
+
+
+def route_long(slug, r):
+    """Long name of a route. National operators (Renfe) leave it empty for long distance: use the stretch
+    inside the crop, 'first stop -> last stop' of one of its trips."""
+    if r["long"] or not is_national(slug):
+        return r["long"]
+    db = DBS[slug]
+    key = (slug, db.version)
+    m = _route_names.get(key)
+    if m is None:
+        m = {}
+        for row in db.q("SELECT t.route_id, MIN(t.tix) tix FROM trips t "
+                        "WHERE (SELECT COUNT(*) FROM stop_times s WHERE s.tix=t.tix) >= 2 GROUP BY t.route_id"):
+            rows = db.trip_stop_times(row["tix"])
+            if len(rows) >= 2:
+                m[row["route_id"]] = "%s → %s" % (rows[0]["name"], rows[-1]["name"])
+        _route_names.clear()
+        _route_names[key] = m
+    return m.get(r["route_id"], "")
+
+
+def shown_routes(slug):
+    """Routes worth listing: all of them, or for a national operator only those calling inside the crop."""
+    routes = DBS[slug].routes().values()
+    if is_national(slug):
+        _, inside = region_ids(slug)
+        routes = [r for r in routes if r["route_id"] in inside]
+    return routes
 
 
 def routes_of(slug):
     db = DBS[slug]
     out = []
-    for r in db.routes().values():
+    for r in shown_routes(slug):
         color, text, _ = route_style(db, r)
-        out.append({"route_id": r["route_id"], "line": r["short"] or r["long"] or r["route_id"], "long": r["long"],
+        long_ = route_long(slug, r)
+        out.append({"route_id": r["route_id"], "line": r["short"] or long_ or r["route_id"], "long": long_,
                     "color": color, "text_color": text, "mode": r["mode"]})
     return sorted(out, key=lambda r: _natkey(r["line"]))
 
@@ -1558,7 +1654,7 @@ def alerts(slug_filter=None):
         f = feed_for(slug, "alerts")
         if not f or not f.data:
             continue
-        for a in f.data["alerts"]:
+        for a in region_items(slug, "alerts", f.data["alerts"]):
             per = a.get("periods") or []
             if per:
                 ok = any((not p.get("start") or fix_ts(slug, p["start"]) <= now) and
@@ -1612,14 +1708,15 @@ def search_all(q, limit=25):
             res["operators"].append({"agency": slug, "name": info["name"]})
         try:
             db = DBS[slug]
-            for r in db.routes().values():
-                short, long_ = norm(r["short"]), norm(r["long"])
+            for r in shown_routes(slug):
+                long_text = route_long(slug, r)
+                short, long_ = norm(r["short"]), norm(long_text)
                 rank = 0 if short == qn else 1 if short.startswith(qn) else 2 if (len(qn) >= 3 and qn in long_) else None
                 if rank is None:
                     continue
                 color, text, _ = route_style(db, r)
                 res["routes"].append({"agency": slug, "agency_name": info["name"], "route_id": r["route_id"],
-                                      "line": r["short"] or r["long"] or r["route_id"], "long": r["long"],
+                                      "line": r["short"] or long_text or r["route_id"], "long": long_text,
                                       "color": color, "text_color": text, "mode": r["mode"], "_r": rank})
         except Exception:
             log.exception("route search failed in %s", slug)

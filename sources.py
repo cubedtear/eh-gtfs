@@ -55,7 +55,37 @@ SOURCES = [
         "resources": {"gtfs": 80701, "trips": 80703, "alerts": 80702},   # transport.data.gouv.fr resource ids
         "quirks": {"zero_delay_untracked": True, "city_in_name": True},
     },
+    {
+        # Renfe Cercanias, straight from Renfe. Replaces the copy of the same GTFS in the MovEuskadi index
+        # (same slug, so it takes that entry's place). It is one national feed for every Cercanias network in
+        # Spain: the importer and the real-time filters keep only what falls inside Euskal Herria
+        # (store.BBOX_AGENCIES, core.region_*). The real-time ids match this GTFS.
+        "slug": "renfe_cercanias",
+        "name": "RENFE Cercanias",
+        "region": "eh",
+        "gtfs_url": "https://ssl.renfe.com/ftransit/Fichero_CER_FOMENTO/fomento_transit.zip",
+        "rt": {
+            "vehicles": "https://gtfsrt.renfe.com/vehicle_positions.pb",
+            "trips": "https://gtfsrt.renfe.com/trip_updates.pb",
+            "alerts": "https://gtfsrt.renfe.com/alerts.pb",
+        },
+        "replaces_index": True,       # ignore the operator of the same slug in the MovEuskadi index
+    },
+    {
+        # Renfe long and medium distance (Alvia, Intercity, Media Distancia, Avant; no high speed reaches Euskal
+        # Herria), straight from Renfe. Replaces the MovEuskadi copy. Timetable only: Renfe publishes no
+        # real-time feed for these trains.
+        "slug": "renfe_media",
+        "name": "RENFE Larga y Media Distancia",
+        "region": "eh",
+        "gtfs_url": "https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip",
+        "replaces_index": True,
+    },
 ]
+
+
+def replaced_in_index(slug):
+    return any(s["slug"] == slug and s.get("replaces_index") for s in SOURCES)
 
 _lock = threading.Lock()          # one resolution at a time (it touches the cache file)
 _force_lock = threading.Lock()
@@ -107,6 +137,8 @@ def resolve(src):
     """Current URLs of one operator: {"gtfs": url, "stamp": str, "rt": {"trips": url, "alerts": url}} or None.
 
     `stamp` changes when the publisher updates the timetable (the importer re-imports on change)."""
+    if src.get("gtfs_url"):
+        return _resolve_direct(src)
     with _lock:
         cache = _load_cache()
         found = {}
@@ -136,6 +168,28 @@ def resolve(src):
             return None
         return {"gtfs": merged["gtfs"]["url"], "stamp": merged["gtfs"].get("stamp", ""),
                 "rt": {k: merged[k]["url"] for k in ("trips", "alerts") if k in merged}}
+
+
+def _resolve_direct(src):
+    """Operator with fixed URLs: the timetable 'stamp' is the file's Last-Modified (or ETag) from a HEAD request,
+    so the importer re-imports when the publisher uploads a new file."""
+    url = src["gtfs_url"]
+    stamp = ""
+    try:
+        req = urllib.request.Request(url, headers=UA, method="HEAD")
+        with urllib.request.urlopen(req, timeout=30, context=SSL_CTX) as r:
+            stamp = r.headers.get("Last-Modified") or r.headers.get("ETag") or ""
+    except Exception as e:
+        log.warning("%s: cannot read the headers of %s (%s)", src["slug"], url, e)
+    with _lock:
+        cache = _load_cache()
+        if stamp:
+            if cache.get(src["slug"], {}).get("stamp") != stamp:
+                cache[src["slug"]] = {"stamp": stamp}
+                _save_cache(cache)
+        else:
+            stamp = cache.get(src["slug"], {}).get("stamp", "")   # keep the last known one: no needless re-import
+    return {"gtfs": url, "stamp": stamp, "rt": dict(src.get("rt") or {})}
 
 
 def should_force(slug):

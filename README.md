@@ -74,6 +74,16 @@ real-time page per stop (`https://lurraldebus.eus/real/result/0/<stop_id>`, same
 the next bus of every line with minutes left and the occupancy reported by the vehicle. `lurraldebus.py` reads it
 (`core.py`, section "Lurraldebus live arrivals", does the rest):
 
+- Both Renfe timetables are read straight from Renfe, not from the MovEuskadi copy: Cercanias
+  (`ssl.renfe.com/ftransit/Fichero_CER_FOMENTO/fomento_transit.zip`) and long/medium distance
+  (`ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip`, Alvia/Intercity/Regional/Avant; no high speed
+  reaches Euskal Herria). They are national files, cropped to the area; a line is listed only if a trip calls at
+  two or more stops inside it, and long-distance lines (which have no name in the feed) are named after the
+  stretch inside the crop. Only Cercanias has real time.
+- Renfe Cercanias real time comes from Renfe's own national feeds (`gtfsrt.renfe.com`: vehicle positions, trip
+  updates, alerts), set in `sources.py` together with the static GTFS, which is read straight from Renfe (`ssl.renfe.com/ftransit/Fichero_CER_FOMENTO/fomento_transit.zip`) instead of the MovEuskadi copy. They cover every
+  Cercanias network in Spain, so the server keeps only the vehicles inside the crop and the trip updates and
+  alerts that touch a stop or line of it. Renfe Media Distancia has no real-time feed here.
 - Each prediction is matched to the scheduled trip it most likely belongs to (same line, closest scheduled time,
   same direction) and stored as a synthetic trip update. Station departures then show live times, trip pages show
   the delay carried to the other stops, and buses appear on the map as estimated (dashed) vehicles, like Euskotren.
