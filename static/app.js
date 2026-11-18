@@ -49,8 +49,12 @@ const regionName = r => t('region_' + (r || 'eus'));
 const byRegion = list => REGIONS.map(r => [r, list.filter(a => (a.region || 'eus') === r)]).filter(([, l]) => l.length);
 const POLL_VEHICLES_MS = 15000;
 const POLL_VIEW_MS = 20000;
-const BUS_MIN_ZOOM = 11;      // buses are hidden below this zoom unless a scope filter is active
-const STOP_MIN_ZOOM = 14;     // bus stops appear from this zoom; rail stations from 11
+// Zoom thresholds, the same for every mode. Stops: shown from this zoom, whatever they serve (bus, train, metro...).
+// Live vehicles: drawn one by one from VEHICLE_MIN_ZOOM; zoomed further out they are grouped into count bubbles,
+// so the opening view of the whole territory is never empty.
+const STOP_MIN_ZOOM = 13;
+const VEHICLE_MIN_ZOOM = 10;
+const CLUSTER_PX = 76;        // size of the grid cell of a vehicle bubble, in screen pixels
 
 /** Languages in the order shown in the selectors: Euskara, Español, Français, English. */
 const LANGS = [['eu', 'Euskara'], ['es', 'Español'], ['fr', 'Français'], ['en', 'English']];
@@ -184,6 +188,7 @@ function applyBasemap() {
   $('#map').classList.toggle('osm', detailed);
 }
 const vehLayer = L.layerGroup().addTo(map);
+const cluLayer = L.layerGroup().addTo(map);
 const stnLayer = L.layerGroup().addTo(map);
 const routeLayer = L.layerGroup().addTo(map);
 const meLayer = L.layerGroup().addTo(map);
@@ -192,7 +197,7 @@ const selVehLayer = L.layerGroup().addTo(map);
 const markers = new Map();   // vehicle id -> {m, v, key}
 map.on('zoomstart', () => $('#map').classList.add('noanim'));
 map.on('zoomend', () => setTimeout(() => $('#map').classList.remove('noanim'), 50));
-function zoomClass() { const z = map.getZoom(); const m = $('#map'); m.classList.toggle('tiny', z <= 10); m.classList.toggle('compact', z > 10 && z <= 12); }
+function zoomClass() { const z = map.getZoom(), m = $('#map'); m.classList.toggle('compact', z <= 12); m.classList.toggle('dense', z <= 11); }
 map.on('zoomend', zoomClass); zoomClass();
 
 function toast(msg, ms = 2500) {
@@ -271,14 +276,14 @@ function fitTo(bounds) {
 
 // ───────────────────────────────────────────────────────────── vehicles
 function hasScope() { const a = S.filters.agencies; return !!S.filters.line || (a && a.size > 0 && a.size <= 3); }
-function busesHidden() { return map.getZoom() < BUS_MIN_ZOOM && !hasScope(); }
+/** Too far out to draw each vehicle: they are grouped into bubbles (unless a line / trip / few operators are picked). */
+function vehiclesClustered() { return map.getZoom() < VEHICLE_MIN_ZOOM && !hasScope() && !S.focus; }
 function vehicleVisible(v) {
   const f = S.filters;
   if (!f.modes.has(v.mode)) return false;
   if (f.agencies && !f.agencies.has(v.agency)) return false;
   if (f.line && !(v.agency === f.line.agency && v.route_id === f.line.route_id)) return false;
   if (v.est && !f.est) return false;
-  if (v.mode === 'bus' && busesHidden()) return false;
   const fo = S.focus;
   if (fo && S.selVeh !== v.id) {
     if (fo.trip_id) return v.agency === fo.agency && v.trip_id === fo.trip_id;
@@ -288,19 +293,60 @@ function vehicleVisible(v) {
 }
 function vehicleIcon(v) {
   const c = colors(v);
-  const txt = v.mode === 'metro' && (v.line || '').length > 5 ? 'M' : (v.line || '');
-  const size = txt.length > 4 ? 9 : txt.length > 3 ? 10 : 12;
+  let txt = v.mode === 'metro' && (v.line || '').length > 5 ? 'M' : (v.line || '');
+  if (txt.length > 7) txt = txt.slice(0, 6) + '…';
   const late = v.delay != null && v.delay >= 300;
-  const arrow = v.bearing != null ? `<span class="arrow" style="transform:rotate(${Math.round(v.bearing)}deg);--ac:${c.bg}"></span>` : '';
-  const html = `<div class="v${v.est ? ' est' : ''}${late ? ' late' : ''}${v.mode === 'train' || v.mode === 'metro' || v.mode === 'tram' ? ' sq' : ''}" style="background:${c.bg};color:${c.fg};font-size:${size}px">${arrow}${esc(txt)}</div>`;
+  // the marker is a pill: as wide as its text needs, never narrower than a circle
+  const w = Math.max(30, Math.round(txt.length * 7.6 + 16));
+  let arrow = '';
+  if (v.bearing != null) {   // the arrow orbits the pill: distance from the centre to its edge along the heading, plus a gap
+    const th = v.bearing * Math.PI / 180, rx = w / 2, ry = 15;
+    const edge = 1 / Math.sqrt(Math.pow(Math.sin(th) / rx, 2) + Math.pow(Math.cos(th) / ry, 2));
+    arrow = `<span class="arrow" style="transform:rotate(${Math.round(v.bearing)}deg) translateY(-${Math.round(edge + 9)}px);--ac:${c.bg}"></span>`;
+  }
+  const html = `<div class="v${v.est ? ' est' : ''}${late ? ' late' : ''}${v.mode === 'train' || v.mode === 'metro' || v.mode === 'tram' ? ' sq' : ''}" style="background:${c.bg};color:${c.fg};min-width:${w}px">${arrow}<span class="vt">${esc(txt)}</span></div>`;
   return L.divIcon({ className: 'veh', html, iconSize: [0, 0] });
 }
 function vehKey(v) { return [v.line, v.color, v.mode, v.est, v.delay != null && v.delay >= 300, v.bearing != null ? Math.round(v.bearing / 5) : '-'].join('|'); }
 
+/** Group vehicles into screen-grid cells: [{n, lat, lon, modes, pts}]. */
+function clusterVehicles(list) {
+  const z = map.getZoom(), cells = new Map();
+  for (const v of list) {
+    const p = map.project([v.lat, v.lon], z);
+    const k = Math.floor(p.x / CLUSTER_PX) + ':' + Math.floor(p.y / CLUSTER_PX);
+    let c = cells.get(k);
+    if (!c) cells.set(k, c = { n: 0, lat: 0, lon: 0, modes: {}, pts: [] });
+    c.n++; c.lat += v.lat; c.lon += v.lon; c.modes[v.mode] = (c.modes[v.mode] || 0) + 1; c.pts.push([v.lat, v.lon]);
+  }
+  return [...cells.values()].map(c => Object.assign(c, { lat: c.lat / c.n, lon: c.lon / c.n }));
+}
+function clusterIcon(c) {
+  const kinds = Object.keys(c.modes);
+  const size = Math.round(Math.min(58, 30 + Math.sqrt(c.n) * 5));
+  const bg = kinds.length === 1 ? (MODE_COLOR[kinds[0]] || cssv('--ink')) : cssv('--ink');
+  return L.divIcon({ className: 'vclu', iconSize: [size, size],
+    html: `<div class="cl" style="width:${size}px;height:${size}px;background:${bg}"><b class="num">${c.n}</b></div>` });
+}
+function drawClusters(list) {
+  cluLayer.clearLayers();
+  for (const c of clusterVehicles(list)) {
+    const m = L.marker([c.lat, c.lon], { icon: clusterIcon(c), keyboard: false, riseOnHover: true });
+    m.on('click', () => {   // zoom in until the vehicles of this bubble are drawn one by one
+      const b = L.latLngBounds(c.pts);
+      flyTo(b.getCenter(), Math.min(Math.max(map.getBoundsZoom(b.pad(.25)), map.getZoom() + 1), VEHICLE_MIN_ZOOM + 2));
+    });
+    m.addTo(cluLayer);
+  }
+}
+
 function drawVehicles() {
+  const vis = S.vehicles.filter(vehicleVisible);
+  const clustered = vehiclesClustered();
+  const shown = clustered ? vis.filter(v => v.id === S.selVeh) : vis;   // the selected one is always drawn alone
+  if (clustered) drawClusters(vis.filter(v => v.id !== S.selVeh)); else cluLayer.clearLayers();
   const seen = new Set();
-  for (const v of S.vehicles) {
-    if (!vehicleVisible(v)) continue;
+  for (const v of shown) {
     seen.add(v.id);
     let e = markers.get(v.id);
     if (!e) {
@@ -321,7 +367,7 @@ function drawVehicles() {
   selVehLayer.clearLayers();
   const sel = S.selVeh && markers.get(S.selVeh);
   if (sel) L.circleMarker(sel.m.getLatLng(), { radius: 22, color: cssv('--map-sel'), weight: 3, fillColor: cssv('--map-sel'), fillOpacity: .15, interactive: false }).addTo(selVehLayer);
-  const el = $('#veh-count'); if (el) el.textContent = seen.size;
+  const el = $('#veh-count'); if (el) el.textContent = vis.length;
 }
 
 // ───────────────────────────────────────────────────────────── vehicle in the sidebar
@@ -374,7 +420,7 @@ function vehActions(v) {
 let vehBusy = false;
 /** Map area to cover with live bus data: only sent while buses are actually shown (keeps Lurraldebus requests down). */
 function vehicleView() {
-  if (!S.filters.modes.has('bus') || busesHidden()) return undefined;
+  if (!S.filters.modes.has('bus') || vehiclesClustered()) return undefined;
   const b = map.getBounds();
   const r = x => x.toFixed(3);
   return { s: r(b.getSouth()), w: r(b.getWest()), n: r(b.getNorth()), e: r(b.getEast()) };
@@ -429,10 +475,10 @@ let stnReq = 0;
 async function loadStations() {
   stnLayer.clearLayers();
   if (!S.filters.showStops) return;
-  const z = map.getZoom(); if (z < 11) return;
+  const z = map.getZoom(); if (z < STOP_MIN_ZOOM) return;
   const b = map.getBounds(); const id = ++stnReq;
   try {
-    const d = await api('stations', { s: b.getSouth(), w: b.getWest(), n: b.getNorth(), e: b.getEast(), rail: z < STOP_MIN_ZOOM ? 1 : 0 });
+    const d = await api('stations', { s: b.getSouth(), w: b.getWest(), n: b.getNorth(), e: b.getEast() });
     if (id !== stnReq) return;
     stnLayer.clearLayers();
     const f = S.filters;
@@ -442,7 +488,7 @@ async function loadStations() {
       if (f.agencies && !f.agencies.has(s.agency)) continue;
       const railMode = ms.find(x => x !== 'bus');
       const mk = L.circleMarker([s.lat, s.lon], {
-        radius: railMode ? (z >= 14 ? 8 : 6) : (z >= 16 ? 6.5 : 4.5), bubblingMouseEvents: false, weight: 1.5, color: cssv('--map-ring'),
+        radius: (z >= 16 ? 7 : z >= 14 ? 6 : 5) + (railMode ? 1.5 : 0), bubblingMouseEvents: false, weight: 1.5, color: cssv('--map-ring'),
         fillColor: MODE_COLOR[railMode || ms[0]] || '#2d6cdf', fillOpacity: 1,
       });
       mk.bindTooltip(esc(s.name), { direction: 'top', offset: [0, -4] });

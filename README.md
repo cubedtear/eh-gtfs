@@ -56,6 +56,14 @@ index (`data-index.json`) reports a newer timetable. Real-time `.pb` feeds are f
 - AlavaBus encodes entity timestamps as local time; `LOCAL_EPOCH` in `core.py` corrects this.
 - The Renfe feeds cover all of Spain; see "Limited to Euskal Herria" below.
 
+## Zoom levels
+
+All kinds of stops (bus, train, metro, tram, funicular) appear at the same zoom, 13. Live vehicles are drawn one by
+one from zoom 10; zoomed further out they are grouped into count bubbles (click one to zoom in), so the opening
+view of the whole territory shows where the service is running. Picking a line, a trip or up to three operators
+shows their vehicles one by one at any zoom. The thresholds are `STOP_MIN_ZOOM` and `VEHICLE_MIN_ZOOM` in
+`static/app.js`.
+
 ## Limited to Euskal Herria
 
 Everything shown is limited to Euskal Herria (outline: OpenStreetMap relation 11107464, simplified to about

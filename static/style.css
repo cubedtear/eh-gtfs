@@ -316,19 +316,22 @@ table.src th { color: var(--muted); font-weight: 600; }
 /* ---------------- map bits */
 .veh { background: none; border: 0; }
 .veh .v {
-  width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; border: 2.5px solid var(--map-ring); color: var(--lb-fg);
-  display: flex; align-items: center; justify-content: center; font: 700 11px/1 var(--font); position: relative;
-  box-shadow: var(--shadow-pin); overflow: visible; letter-spacing: -.3px;
+  --s: 1; position: absolute; left: 0; top: 0; transform: translate(-50%, -50%) scale(var(--s));
+  box-sizing: border-box; height: 30px; padding: 0 7px; border-radius: 15px; border: 2.5px solid var(--map-ring); color: var(--lb-fg);
+  display: flex; align-items: center; justify-content: center; font: 700 12px/1 var(--font); white-space: nowrap;
+  box-shadow: var(--shadow-pin); letter-spacing: -.2px;
 }
+.veh .v .vt { position: relative; }
 .veh .v.est { border-style: dashed; }
-.veh .v .arrow { position: absolute; left: 50%; top: 50%; width: 0; height: 0; margin: -22px 0 0 -5px; border: 5px solid transparent; border-bottom: 9px solid var(--ac, var(--ink)); transform-origin: 5px 22px; }
+.veh .v .arrow { position: absolute; left: 50%; top: 50%; width: 0; height: 0; margin: -7px 0 0 -5px; border: 5px solid transparent; border-bottom: 9px solid var(--ac, var(--ink)); }
 .veh .v.late { box-shadow: 0 0 0 3px var(--bad), var(--shadow-pin); }
-.veh .v.sq { border-radius: 8px; }
+.veh .v.sq { border-radius: 9px; }
 .leaflet-marker-icon.veh { transition: transform 1.2s linear; }
 #map.noanim .leaflet-marker-icon.veh { transition: none; }
-#map.compact .veh .v { transform: scale(.72); }
-#map.tiny .veh .v { transform: scale(.4); font-size: 0 !important; border-width: 2px; }
-#map.tiny .veh .v .arrow { display: none; }
+#map.compact .veh .v { --s: .8; }
+#map.dense .veh .v { --s: .68; }
+.vclu { background: none; border: 0; }
+.vclu .cl { box-sizing: border-box; border-radius: 50%; border: 3px solid var(--map-ring); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-pin); font-size: var(--fs-m); opacity: .92; }
 .toast { position: absolute; left: 50%; top: var(--sp-3); transform: translateX(-50%); background: var(--toast-bg); color: var(--toast-fg); padding: var(--sp-2) var(--sp-4); border-radius: 999px; font-size: var(--fs-m); z-index: 1000; pointer-events: none; max-width: calc(100% - 32px); text-align: center; }
 .me { width: 16px; height: 16px; border-radius: 50%; background: var(--me); border: 3px solid var(--map-ring); box-shadow: 0 0 0 6px color-mix(in srgb, var(--me) 28%, transparent); margin: -8px 0 0 -8px; }
 .leaflet-control-attribution { font-size: 11px; background: color-mix(in srgb, var(--surface) 85%, transparent) !important; color: var(--muted); }

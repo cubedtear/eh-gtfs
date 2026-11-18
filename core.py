@@ -1602,7 +1602,7 @@ def search_stations(q, limit=40, lat=None, lon=None):
     return res[:limit]
 
 
-def stations_in_bbox(s, w, n, e, limit=600, rail_only=False):
+def stations_in_bbox(s, w, n, e, limit=1500, rail_only=False):
     res = []
     shared = set()      # Lurraldebus stops are listed once, however many operators serve them
     for slug, info in AGENCIES.items():
