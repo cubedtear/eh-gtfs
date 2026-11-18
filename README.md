@@ -56,6 +56,14 @@ index (`data-index.json`) reports a newer timetable. Real-time `.pb` feeds are f
 - AlavaBus encodes entity timestamps as local time; `LOCAL_EPOCH` in `core.py` corrects this.
 - The Renfe feeds cover all of Spain; see "Limited to Euskal Herria" below.
 
+## Cache busting
+
+`index.html` is rendered by the server: every local css / js / image / manifest it references gets
+`?v=<hash of the file's content>`, so a changed file gets a new URL and browsers fetch it again. Versioned URLs are
+served `Cache-Control: public, max-age=31536000, immutable`; `index.html`, `sw.js` and any URL without the current
+hash are always revalidated (ETag, `304 Not Modified` when unchanged); `/api/*` is `no-store`. Nothing to do on
+deploy, the hashes are computed from the files at run time. The service worker keeps only the newest version of each file.
+
 ## Zoom levels
 
 All kinds of stops (bus, train, metro, tram, funicular) appear at the same zoom, 13. Live vehicles are drawn one by

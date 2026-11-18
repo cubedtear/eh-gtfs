@@ -6,10 +6,12 @@ Only the Python 3.9+ standard library is required.
 """
 import argparse
 import gzip
+import hashlib
 import json
 import logging
 import mimetypes
 import os
+import re
 import threading
 import time
 import traceback
@@ -128,6 +130,42 @@ def _alert_applies(a, slug, station_id, items):
     return False
 
 
+# ---- static files and cache busting
+#
+# index.html is rendered on the fly: every local css / js / image / manifest it points to gets "?v=<hash of the
+# file's content>". A versioned URL never changes meaning, so browsers may keep it for a year (immutable); when a
+# file changes its hash changes, the URL changes, and browsers fetch it again. index.html itself is always
+# revalidated (ETag, so an unchanged page costs a 304). Anything fetched without a matching ?v= is revalidated too.
+_hash_cache = {}                 # path -> (mtime_ns, size, hash)
+_LOCAL_REF = re.compile(r'(href|src)="([^"?#:]+\.(?:css|js|png|svg|webmanifest|ico))"')
+
+
+def file_hash(fp):
+    st = os.stat(fp)
+    hit = _hash_cache.get(fp)
+    if hit and hit[0] == st.st_mtime_ns and hit[1] == st.st_size:
+        return hit[2]
+    with open(fp, "rb") as f:
+        h = hashlib.sha1(f.read()).hexdigest()[:10]
+    _hash_cache[fp] = (st.st_mtime_ns, st.st_size, h)
+    return h
+
+
+def render_index(fp):
+    with open(fp, encoding="utf-8") as f:
+        html = f.read()
+
+    def version(m):
+        ref = m.group(2)
+        if ref.startswith("//"):
+            return m.group(0)
+        target = os.path.normpath(os.path.join(STATIC, ref.lstrip("/")))
+        if target.startswith(STATIC + os.sep) and os.path.isfile(target):
+            return '%s="%s?v=%s"' % (m.group(1), ref, file_hash(target))
+        return m.group(0)
+    return _LOCAL_REF.sub(version, html).encode("utf-8")
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     server_version = "Mugitu/1.0"
@@ -155,6 +193,12 @@ class Handler(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(body)
 
+    def _not_modified(self, extra):
+        self.send_response(304)
+        for k, val in extra.items():
+            self.send_header(k, val)
+        self.end_headers()
+
     def do_GET(self):
         u = urlparse(self.path)
         if u.path.startswith("/api/"):
@@ -177,8 +221,23 @@ class Handler(BaseHTTPRequestHandler):
             ctype = "application/manifest+json"
         if ctype.startswith("text/") or ctype in ("application/javascript", "application/json", "application/manifest+json"):
             ctype += "; charset=utf-8"
-        with open(fp, "rb") as f:
-            self._send(200, f.read(), ctype, {"Cache-Control": "no-cache"})
+        if os.path.basename(fp) == "index.html":
+            body = render_index(fp)
+            tag = hashlib.sha1(body).hexdigest()[:16]
+            cache = "no-cache"
+        else:
+            body = None
+            tag = file_hash(fp)
+            # a URL carrying the file's current hash is immutable; anything else must be revalidated
+            cache = "public, max-age=31536000, immutable" if parse_qs(u.query).get("v") == [tag[:10]] else "no-cache"
+        etag = 'W/"%s"' % tag
+        headers = {"Cache-Control": cache, "ETag": etag}
+        if self.headers.get("If-None-Match") == etag:
+            return self._not_modified(headers)
+        if body is None:
+            with open(fp, "rb") as f:
+                body = f.read()
+        self._send(200, body, ctype, headers)
 
 
 def main():
