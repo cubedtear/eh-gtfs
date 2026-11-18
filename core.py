@@ -100,21 +100,17 @@ def load_index():
                 continue                    # that operator is read straight from its publisher (sources.py)
             if info["slug"] in store.BBOX_AGENCIES:
                 info["region"] = "eh"
-                info["gtfs_stamp"] = crop_stamp(info["gtfs_stamp"])
             new[info["slug"]] = info
     _merge_agencies(new)
     return True
-
-
-def crop_stamp(stamp):
-    """National feeds are cropped to Euskal Herria: a new crop (or importer change) re-imports them."""
-    return stamp + "|bbox=" + ",".join(str(v) for v in store.BBOX) + "|tidy2"
 
 
 def _merge_agencies(new):
     """Add or refresh operators keeping their import state."""
     with _state_lock:
         for slug, info in new.items():
+            # the stamp also says how the importer cut the feed, so a change of that re-imports every operator
+            info["gtfs_stamp"] = (info.get("gtfs_stamp") or "") + store.IMPORT_TAG
             old = AGENCIES.get(slug)
             info["ready"] = old["ready"] if old else False
             info["error"] = old.get("error") if old else None
@@ -135,8 +131,7 @@ def load_extra_sources(only=None):
             log.warning("%s: no URLs available yet", src["slug"])
             continue
         rt = {k: v for k, v in res["rt"].items()}
-        stamp = crop_stamp(res["stamp"]) if src["slug"] in store.BBOX_AGENCIES else res["stamp"]
-        new[src["slug"]] = {"name": src["name"], "gtfs": res["gtfs"], "gtfs_stamp": stamp, "rt": rt,
+        new[src["slug"]] = {"name": src["name"], "gtfs": res["gtfs"], "gtfs_stamp": res["stamp"], "rt": rt,
                             "slug": src["slug"], "region": src["region"], "quirks": dict(src.get("quirks") or {}),
                             "source": "renfe.com" if src.get("gtfs_url") else "transport.data.gouv.fr"}
     if new:
@@ -304,7 +299,7 @@ def refresh(slugs, kinds):
     list(_pool.map(lambda a: feed_for(*a), jobs))
 
 
-# ---- national feeds (Renfe): keep only what concerns the area the timetable was cropped to
+# ---- real-time entities of operators the importer cut to Euskal Herria
 
 _region_cache = {}
 
@@ -313,45 +308,46 @@ def is_national(slug):
     return slug in store.BBOX_AGENCIES
 
 
+def is_cut(slug):
+    """True when the importer left trips out of this operator (every stop outside Euskal Herria)."""
+    try:
+        return is_national(slug) or DBS[slug].dropped() > 0
+    except Exception:
+        return False
+
+
 def region_ids(slug):
-    """(stop ids, route ids that call at a stop) inside the cropped area of a national operator."""
+    """(trip ids, route ids, stop ids) kept in the operator's database."""
     db = DBS[slug]
     key = (slug, db.version)
     if key not in _region_cache:
-        stops = {r[0] for r in db.q("SELECT stop_id FROM stops")}
-        # a line only matters here if a trip calls at two or more stops inside the crop
-        routes = {r[0] for r in db.q("SELECT DISTINCT t.route_id FROM trips t "
-                                     "WHERE (SELECT COUNT(*) FROM stop_times s WHERE s.tix=t.tix) >= 2")}
-        _region_cache.clear()
-        _region_cache[key] = (stops, routes)
+        ids = ({r[0] for r in db.q("SELECT trip_id FROM trips")}, {r[0] for r in db.q("SELECT route_id FROM routes")},
+               {r[0] for r in db.q("SELECT stop_id FROM stops")})
+        for k in [k for k in _region_cache if k[0] == slug]:
+            del _region_cache[k]
+        _region_cache[key] = ids
     return _region_cache[key]
 
 
-def in_region_pos(v):
-    b = store.BBOX
-    return b[0] <= v.get("lat", 0) <= b[2] and b[1] <= v.get("lon", 0) <= b[3]
-
-
-def region_trip_update(slug, tu):
-    stops, _ = region_ids(slug)
-    return any(s.get("stop_id") in stops for s in tu["stus"])
-
-
-def region_alert(slug, a):
-    stops, routes = region_ids(slug)
-    return any(e.get("route_id") in routes or e.get("stop_id") in stops for e in a.get("entities") or [])
-
-
 def region_items(slug, kind, items):
-    """Entities of a feed that concern the area: everything for regional operators, a subset for national ones."""
-    if not is_national(slug) or slug not in DBS:
+    """Entities of a real-time feed that belong to the lines kept for Euskal Herria. Regional operators are
+    untouched unless some of their trips were cut; national ones (Renfe) lose everything outside."""
+    if not items or slug not in DBS or not is_cut(slug):
         return items
+    national = is_national(slug)
     try:
+        trips, routes, stops = region_ids(slug)
         if kind == "vehicles":
-            return [v for v in items if in_region_pos(v)]
+            return [v for v in items if ((v.get("trip") or {}).get("trip_id") in trips
+                                         if (v.get("trip") or {}).get("trip_id") else not national)]
         if kind == "trips":
-            return [t for t in items if region_trip_update(slug, t)]
-        return [a for a in items if region_alert(slug, a)]
+            return [t for t in items if (t.get("trip") or {}).get("trip_id") in trips]
+        out = []
+        for a in items:
+            ents = [e for e in a.get("entities") or [] if e.get("route_id") or e.get("stop_id")]
+            if (any(e.get("route_id") in routes or e.get("stop_id") in stops for e in ents) if ents else not national):
+                out.append(a)
+        return out
     except Exception:
         log.exception("region filter failed for %s", slug)
         return items
@@ -366,7 +362,7 @@ def feed_stats(slug, kind):
     if not f or not f.data:
         return {"status": "unknown", "n": 0}
     key = {"vehicles": "vehicles", "trips": "trip_updates", "alerts": "alerts"}[kind]
-    n = len(region_items(slug, kind, f.data[key])) if is_national(slug) and f.data[key] else len(f.data[key])
+    n = len(region_items(slug, kind, f.data[key]))
     ts = f.data["timestamp"]  # header timestamps are true UTC even for skewed feeds
     age = int(time.time() - ts) if ts else None
     if f.error and n == 0:
@@ -1534,8 +1530,8 @@ _route_names = {}
 
 
 def route_long(slug, r):
-    """Long name of a route. National operators (Renfe) leave it empty for long distance: use the stretch
-    inside the crop, 'first stop -> last stop' of one of its trips."""
+    """Long name of a route. National operators (Renfe) leave it empty for long distance: use
+    'first stop → last stop' of one of its trips (all its stops are stored)."""
     if r["long"] or not is_national(slug):
         return r["long"]
     db = DBS[slug]
@@ -1544,7 +1540,7 @@ def route_long(slug, r):
     if m is None:
         m = {}
         for row in db.q("SELECT t.route_id, MIN(t.tix) tix FROM trips t "
-                        "WHERE (SELECT COUNT(*) FROM stop_times s WHERE s.tix=t.tix) >= 2 GROUP BY t.route_id"):
+                        "WHERE EXISTS (SELECT 1 FROM stop_times s WHERE s.tix=t.tix) GROUP BY t.route_id"):
             rows = db.trip_stop_times(row["tix"])
             if len(rows) >= 2:
                 m[row["route_id"]] = "%s → %s" % (rows[0]["name"], rows[-1]["name"])
@@ -1554,12 +1550,8 @@ def route_long(slug, r):
 
 
 def shown_routes(slug):
-    """Routes worth listing: all of them, or for a national operator only those calling inside the crop."""
-    routes = DBS[slug].routes().values()
-    if is_national(slug):
-        _, inside = region_ids(slug)
-        routes = [r for r in routes if r["route_id"] in inside]
-    return routes
+    """Routes worth listing: the importer already kept only those with a stop inside Euskal Herria."""
+    return DBS[slug].routes().values()
 
 
 def routes_of(slug):

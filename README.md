@@ -10,7 +10,7 @@ has a region (`eus`, `nav`, `ipar`) and the UI lists them side by side.
 |---|---|---|
 | Euskadi | Open Data Euskadi / MovEuskadi (`data-index.json`, read by `core.py`) | all of them (Euskotren, Bizkaibus, Lurraldebus, ...) |
 | Ipar Euskal Herria | transport.data.gouv.fr (configured in `sources.py`) | Txik Txak |
-| Nafarroa | no regional operator added yet (only the Renfe stations inside the crop, e.g. Tudela) | - |
+| Nafarroa | no regional operator added yet (only Renfe long/medium distance lines that call there, e.g. Tudela) | - |
 
 Adding an operator outside the MovEuskadi index is one entry in `sources.py` (dataset id, resource ids, region and
 optional quirks). Everything after that (import, real time, UI) is shared.
@@ -54,8 +54,19 @@ index (`data-index.json`) reports a newer timetable. Real-time `.pb` feeds are f
 - Euskotren publishes trip updates but no vehicle positions: train positions are estimated from
   the trip updates and shown with a dashed outline.
 - AlavaBus encodes entity timestamps as local time; `LOCAL_EPOCH` in `core.py` corrects this.
-- Renfe feeds cover all of Spain and are cropped to Euskal Herria (a rectangle, so a few stations of neighbouring
-  provinces come with it).
+- The Renfe feeds cover all of Spain; see "Limited to Euskal Herria" below.
+
+## Limited to Euskal Herria
+
+Everything shown is limited to Euskal Herria (outline: OpenStreetMap relation 11107464, simplified to about
+1000 points in `region.py`; `python3 tools/make_region.py` rebuilds it). The rule is applied to every operator
+when its timetable is imported: **a trip is kept only if at least one of its stops is inside the territory**.
+A trip that is kept keeps all its stops, so a line that leaves the territory still shows where it goes; a line
+whose stops are all outside is not stored, so it appears nowhere (map, lines, search, departures, alerts).
+Real-time entities (vehicles, trip updates, alerts) of the Renfe national feeds, or of any operator with cut
+trips, are filtered to the kept trips, lines and stops. An operator with nothing inside is reported as
+"no stops inside Euskal Herria" in the Sources tab. The border is approximate (a couple of hundred metres).
+Changing `store.IMPORT_TAG` re-imports every operator, the old database serving until the new one is ready.
 
 ## Timetable for another date
 
@@ -77,13 +88,9 @@ the next bus of every line with minutes left and the occupancy reported by the v
 - Both Renfe timetables are read straight from Renfe, not from the MovEuskadi copy: Cercanias
   (`ssl.renfe.com/ftransit/Fichero_CER_FOMENTO/fomento_transit.zip`) and long/medium distance
   (`ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip`, Alvia/Intercity/Regional/Avant; no high speed
-  reaches Euskal Herria). They are national files, cropped to the area; a line is listed only if a trip calls at
-  two or more stops inside it, and long-distance lines (which have no name in the feed) are named after the
-  stretch inside the crop. Only Cercanias has real time.
-- Renfe Cercanias real time comes from Renfe's own national feeds (`gtfsrt.renfe.com`: vehicle positions, trip
-  updates, alerts), set in `sources.py` together with the static GTFS, which is read straight from Renfe (`ssl.renfe.com/ftransit/Fichero_CER_FOMENTO/fomento_transit.zip`) instead of the MovEuskadi copy. They cover every
-  Cercanias network in Spain, so the server keeps only the vehicles inside the crop and the trip updates and
-  alerts that touch a stop or line of it. Renfe Media Distancia has no real-time feed here.
+  reaches Euskal Herria). Long-distance lines have no name in the feed, so they are named
+  "first stop → last stop". Only Cercanias has real time: Renfe's national feeds (`gtfsrt.renfe.com`:
+  vehicle positions, trip updates, alerts), set in `sources.py` next to the static GTFS.
 - Each prediction is matched to the scheduled trip it most likely belongs to (same line, closest scheduled time,
   same direction) and stored as a synthetic trip update. Station departures then show live times, trip pages show
   the delay carried to the other stops, and buses appear on the map as estimated (dashed) vehicles, like Euskotren.

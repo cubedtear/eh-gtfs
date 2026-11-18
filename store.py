@@ -9,6 +9,8 @@ import sqlite3
 import threading
 import unicodedata
 import zipfile
+
+import region
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -16,10 +18,12 @@ TZ = ZoneInfo("Europe/Madrid")
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 DB_DIR = os.path.join(DATA_DIR, "db")
 
-# Agencies whose GTFS covers all of Spain: keep only what is inside Euskal Herria (Euskadi, Nafarroa and
-# Iparralde, + margin).
+# National feeds (Renfe, all of Spain). Every operator is cut to Euskal Herria at import (see import_gtfs): a trip is
+# kept only if one of its stops is inside the territory (region.py). These are also the feeds whose real-time data
+# is national, and whose trips get a destination derived from their last stop.
 BBOX_AGENCIES = {"renfe_media", "renfe_cercanias"}
-BBOX = (41.9, -4.0, 43.6, -0.7)  # south, west, north, east
+# Bump when the importer changes what it stores: the operators are re-imported (the old database serves meanwhile).
+IMPORT_TAG = "|eh3"
 
 SCHEMA_VERSION = 3
 
@@ -128,18 +132,15 @@ def import_gtfs(zip_path, db_path, slug, source_stamp="", opts=None):
     db.execute("PRAGMA synchronous=OFF")
     db.executescript(SCHEMA)
     z = zipfile.ZipFile(zip_path)
-    bbox = BBOX if slug in BBOX_AGENCIES else None
+    national = slug in BBOX_AGENCIES
 
-    # stops
-    stops = {}
-    rd = _reader(z, "stops.txt")
-    for r in rd:
+    # stops: which ones are inside Euskal Herria?
+    stops, inside, outside_any = {}, set(), False
+    for r in _reader(z, "stops.txt"):
         sid = (r.get("stop_id") or "").strip()
-        lat, lon = _fnum(r.get("stop_lat")), _fnum(r.get("stop_lon"))
         if not sid:
             continue
-        if bbox and (lat is None or lon is None or not (bbox[0] <= lat <= bbox[2] and bbox[1] <= lon <= bbox[3])):
-            continue
+        lat, lon = _fnum(r.get("stop_lat")), _fnum(r.get("stop_lon"))
         name = (r.get("stop_name") or "").strip()
         city = (r.get("city_name") or "").strip()
         if opts.get("city_in_name") and city and not norm(name).startswith(norm(city)):
@@ -149,47 +150,58 @@ def import_gtfs(zip_path, db_path, slug, source_stamp="", opts=None):
             (r.get("parent_station") or "").strip(), (r.get("stop_code") or "").strip(),
             (r.get("platform_code") or "").strip(),
         )
-    if not stops:
+        if region.contains(lat, lon):
+            inside.add(sid)
+        else:
+            outside_any = True
+    if not inside:
         db.close()
         os.remove(tmp)
         return False
-    db.executemany("INSERT INTO stops VALUES(?,?,?,?,?,?,?)", stops.values())
-
-    # routes
-    rd = _reader(z, "routes.txt")
-    for r in rd:
-        rid = (r.get("route_id") or "").strip()
-        rtype = (r.get("route_type") or "3").strip()
-        db.execute(
-            "INSERT OR REPLACE INTO routes VALUES(?,?,?,?,?,?,?)",
-            (rid, (r.get("route_short_name") or "").strip(), _tidy(r.get("route_long_name")),
-             int(rtype) if rtype.isdigit() else 3, mode_of(rtype),
-             (r.get("route_color") or "").strip(), (r.get("route_text_color") or "").strip()))
 
     # trips
     tix_of = {}
-    rows = []
-    rd = _reader(z, "trips.txt")
-    for i, r in enumerate(rd, 1):
+    trip_rows = []
+    for i, r in enumerate(_reader(z, "trips.txt"), 1):
         tid = (r.get("trip_id") or "").strip()
         tix_of[tid] = i
         d = (r.get("direction_id") or "").strip()
-        rows.append((i, tid, (r.get("route_id") or "").strip(), (r.get("service_id") or "").strip(),
-                     (r.get("trip_headsign") or "").strip(), int(d) if d.isdigit() else None,
-                     (r.get("shape_id") or "").strip()))
-    db.executemany("INSERT OR REPLACE INTO trips VALUES(?,?,?,?,?,?,?)", rows)
-    rows = None
+        trip_rows.append((i, tid, (r.get("route_id") or "").strip(), (r.get("service_id") or "").strip(),
+                          (r.get("trip_headsign") or "").strip(), int(d) if d.isdigit() else None,
+                          (r.get("shape_id") or "").strip()))
+
+    # a trip belongs to the app only if one of its stops is inside Euskal Herria (all its stops are then kept,
+    # so a line that leaves the territory still shows where it goes). A feed whose stops are all inside needs
+    # no filtering; otherwise stop_times are read twice: first to find the trips, then to store them.
+    keep = None
+    if outside_any:
+        keep = set()
+        for r in _reader(z, "stop_times.txt"):
+            if (r.get("stop_id") or "").strip() in inside:
+                tix = tix_of.get((r.get("trip_id") or "").strip())
+                if tix is not None:
+                    keep.add(tix)
+        if not keep:
+            db.close()
+            os.remove(tmp)
+            return False
+    kept_rows = [t for t in trip_rows if keep is None or t[0] in keep]
+    dropped = len(trip_rows) - len(kept_rows)
+    db.executemany("INSERT OR REPLACE INTO trips VALUES(?,?,?,?,?,?,?)", kept_rows)
+    route_ids = {t[2] for t in kept_rows}
+    service_ids = {t[3] for t in kept_rows}
+    shape_ids = {t[6] for t in kept_rows if t[6]}
+    trip_rows = kept_rows = None
 
     # stop_times
     used = set()
     batch = []
-    rd = _reader(z, "stop_times.txt")
-    for r in rd:
+    for r in _reader(z, "stop_times.txt"):
+        tix = tix_of.get((r.get("trip_id") or "").strip())
+        if tix is None or (keep is not None and tix not in keep):
+            continue
         sid = (r.get("stop_id") or "").strip()
         if sid not in stops:
-            continue
-        tix = tix_of.get((r.get("trip_id") or "").strip())
-        if tix is None:
             continue
         arr = parse_hms(r.get("arrival_time"))
         dep = parse_hms(r.get("departure_time"))
@@ -210,48 +222,76 @@ def import_gtfs(zip_path, db_path, slug, source_stamp="", opts=None):
             batch = []
     if batch:
         db.executemany("INSERT OR REPLACE INTO stop_times VALUES(?,?,?,?,?)", batch)
+    keep = None
+
+    # only the stops these trips call at (and their parent stations) are stored
+    needed = set(used)
+    for sid in used:
+        p = stops[sid][4]
+        while p and p in stops and p not in needed:
+            needed.add(p)
+            p = stops[p][4]
+    db.executemany("INSERT INTO stops VALUES(?,?,?,?,?,?,?)", (stops[sid] for sid in needed))
+
+    # routes (only those with a kept trip)
+    for r in _reader(z, "routes.txt"):
+        rid = (r.get("route_id") or "").strip()
+        if rid not in route_ids:
+            continue
+        rtype = (r.get("route_type") or "3").strip()
+        db.execute(
+            "INSERT OR REPLACE INTO routes VALUES(?,?,?,?,?,?,?)",
+            (rid, (r.get("route_short_name") or "").strip(), _tidy(r.get("route_long_name")),
+             int(rtype) if rtype.isdigit() else 3, mode_of(rtype),
+             (r.get("route_color") or "").strip(), (r.get("route_text_color") or "").strip()))
+
     db.execute("CREATE INDEX st_stop ON stop_times(stop_id, dep)")
     db.execute("CREATE INDEX trips_route ON trips(route_id)")
-    if bbox:
+    if national:
         # Renfe leaves trip_headsign empty: use the name of the last stop the trip calls at
         db.execute("UPDATE trips SET headsign=COALESCE((SELECT s.name FROM stop_times st JOIN stops s ON s.stop_id=st.stop_id "
                    "WHERE st.tix=trips.tix ORDER BY st.seq DESC LIMIT 1), '') WHERE headsign=''")
 
-    # calendar
+    # calendar (only the services of the kept trips)
     rd = _reader(z, "calendar.txt")
     if rd:
         for r in rd:
+            sv = (r.get("service_id") or "").strip()
+            if sv not in service_ids:
+                continue
             days = "".join((r.get(d) or "0").strip() for d in
                            ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"))
             db.execute("INSERT OR REPLACE INTO calendar VALUES(?,?,?,?)",
-                       ((r.get("service_id") or "").strip(), days,
-                        (r.get("start_date") or "").strip(), (r.get("end_date") or "").strip()))
+                       (sv, days, (r.get("start_date") or "").strip(), (r.get("end_date") or "").strip()))
     rd = _reader(z, "calendar_dates.txt")
     if rd:
         db.executemany("INSERT INTO calendar_dates VALUES(?,?,?)",
                        (((r.get("service_id") or "").strip(), (r.get("date") or "").strip(),
-                         int((r.get("exception_type") or "1").strip() or 1)) for r in rd))
+                         int((r.get("exception_type") or "1").strip() or 1))
+                        for r in rd if (r.get("service_id") or "").strip() in service_ids))
     db.execute("CREATE INDEX cd_svc ON calendar_dates(service_id)")
 
-    # shapes (only when not bbox filtered: national feeds are huge and not needed)
-    if not bbox:
-        shp = {}
-        rd = _reader(z, "shapes.txt")
-        if rd:
-            for r in rd:
-                lat, lon = _fnum(r.get("shape_pt_lat")), _fnum(r.get("shape_pt_lon"))
-                try:
-                    sq = int(r["shape_pt_sequence"])
-                except (ValueError, KeyError):
-                    continue
-                if lat is None or lon is None:
-                    continue
-                shp.setdefault((r.get("shape_id") or "").strip(), []).append((sq, round(lat, 5), round(lon, 5)))
-            db.executemany(
-                "INSERT INTO shapes VALUES(?,?)",
-                ((k, json.dumps([[a, b] for _, a, b in sorted(v)], separators=(",", ":")))
-                 for k, v in shp.items()))
-            shp = None
+    # shapes (only those of the kept trips)
+    shp = {}
+    rd = _reader(z, "shapes.txt")
+    if rd and shape_ids:
+        for r in rd:
+            shid = (r.get("shape_id") or "").strip()
+            if shid not in shape_ids:
+                continue
+            lat, lon = _fnum(r.get("shape_pt_lat")), _fnum(r.get("shape_pt_lon"))
+            try:
+                sq = int(r["shape_pt_sequence"])
+            except (ValueError, KeyError):
+                continue
+            if lat is None or lon is None:
+                continue
+            shp.setdefault(shid, []).append((sq, round(lat, 5), round(lon, 5)))
+        db.executemany(
+            "INSERT INTO shapes VALUES(?,?)",
+            ((k, json.dumps([[a, b] for _, a, b in sorted(v)], separators=(",", ":")))
+             for k, v in shp.items()))
+        shp = None
 
     # stations: group platforms under their parent station
     stations = {}
@@ -291,6 +331,7 @@ def import_gtfs(zip_path, db_path, slug, source_stamp="", opts=None):
 
     db.execute("INSERT INTO meta VALUES('schema',?)", (str(SCHEMA_VERSION),))
     db.execute("INSERT INTO meta VALUES('stamp',?)", (source_stamp,))
+    db.execute("INSERT INTO meta VALUES('dropped',?)", (str(dropped),))
     db.commit()
     db.execute("VACUUM")
     db.close()
@@ -312,6 +353,7 @@ class AgencyDB:
         self._lock = threading.Lock()
         self._routes = None
         self._range = None
+        self._dropped = None
 
     def reload(self):
         with self._lock:
@@ -319,6 +361,14 @@ class AgencyDB:
             self._svc_cache = {}
             self._routes = None
             self._range = None
+            self._dropped = None
+
+    def dropped(self):
+        """Number of trips left out because every stop is outside Euskal Herria (0: nothing was cut)."""
+        if self._dropped is None:
+            r = self.q("SELECT v FROM meta WHERE k='dropped'")
+            self._dropped = int(r[0][0]) if r and str(r[0][0]).isdigit() else 0
+        return self._dropped
 
     def feed_range(self):
         """(first, last) dates (YYYYMMDD strings) with any published service, or None.

@@ -58,8 +58,8 @@ SOURCES = [
     {
         # Renfe Cercanias, straight from Renfe. Replaces the copy of the same GTFS in the MovEuskadi index
         # (same slug, so it takes that entry's place). It is one national feed for every Cercanias network in
-        # Spain: the importer and the real-time filters keep only what falls inside Euskal Herria
-        # (store.BBOX_AGENCIES, core.region_*). The real-time ids match this GTFS.
+        # Spain: the importer and the real-time filters keep only the lines that touch Euskal Herria
+        # (see region.py and store.import_gtfs, core.region_items). The real-time ids match this GTFS.
         "slug": "renfe_cercanias",
         "name": "RENFE Cercanias",
         "region": "eh",
