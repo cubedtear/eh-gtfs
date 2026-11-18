@@ -13,7 +13,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import date as date_cls, datetime, timedelta
 
 import gtfsrt
 import lurraldebus
@@ -26,6 +26,11 @@ log = logging.getLogger("moveuskadi")
 INDEX_URL = "https://opendata.euskadi.eus/transport/moveuskadi/data-index.json"
 GTFS_DIR = os.path.join(store.DATA_DIR, "gtfs")
 UA = {"User-Agent": "mugitu/1.0 (personal use)"}
+# Theoretical timetables for another date are limited to this window around today (and to the
+# period the operator's published GTFS actually covers).
+SCHEDULE_PAST_DAYS = int(os.environ.get("SCHEDULE_PAST_DAYS", "7"))
+SCHEDULE_FUTURE_DAYS = int(os.environ.get("SCHEDULE_FUTURE_DAYS", "60"))
+SCHEDULE_MAX_ROWS = 2500
 RT_TTL = 15            # seconds a decoded RT feed stays cached
 RT_MAX_AGE = 600       # a feed whose header timestamp is older than this is considered stale
 # AlavaBus publishes timestamps as "local time encoded as UTC"
@@ -43,7 +48,7 @@ def quote_url(u):
 
 def http_get(url, timeout=20):
     req = urllib.request.Request(quote_url(url), headers=dict(UA, **{"Accept-Encoding": "gzip"}))
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with urllib.request.urlopen(req, timeout=timeout, context=sources.SSL_CTX) as r:
         raw = r.read()
         if r.headers.get("Content-Encoding") == "gzip":
             raw = gzip.decompress(raw)
@@ -157,7 +162,7 @@ def _db_stamp(slug):
 
 def _download(url, dest):
     req = urllib.request.Request(quote_url(url), headers=UA)
-    with urllib.request.urlopen(req, timeout=120) as r, open(dest + ".part", "wb") as f:
+    with urllib.request.urlopen(req, timeout=120, context=sources.SSL_CTX) as r, open(dest + ".part", "wb") as f:
         while True:
             chunk = r.read(1 << 20)
             if not chunk:
@@ -946,6 +951,116 @@ def lb_peers(slug, station_id):
     return out
 
 
+# --------------------------------------------------------------------------- theoretical timetable for a date
+
+def today_local():
+    return datetime.now(TZ).date()
+
+
+def date_limits(slugs):
+    """Selectable (min, max) dates for these operators: the window around today, narrowed to the
+    period their published timetables cover (union when several operators share a stop)."""
+    today = today_local()
+    lo, hi = today - timedelta(days=SCHEDULE_PAST_DAYS), today + timedelta(days=SCHEDULE_FUTURE_DAYS)
+    ranges = []
+    for s in slugs:
+        try:
+            r = DBS[s].feed_range()
+        except Exception:
+            r = None
+        if r:
+            ranges.append((datetime.strptime(r[0], "%Y%m%d").date(), datetime.strptime(r[1], "%Y%m%d").date()))
+    if ranges:
+        flo, fhi = min(r[0] for r in ranges), max(r[1] for r in ranges)
+        lo, hi = max(lo, flo), min(hi, fhi)
+    if lo > hi:                      # feed expired or not started: keep a one-day window so the UI stays usable
+        lo = hi = today
+    return lo, hi
+
+
+def parse_date(s):
+    try:
+        return datetime.strptime(s, "%Y%m%d").date()
+    except (TypeError, ValueError):
+        return None
+
+
+def limits_payload(slugs):
+    lo, hi = date_limits(slugs)
+    return {"min": lo.strftime("%Y%m%d"), "max": hi.strftime("%Y%m%d"), "today": today_local().strftime("%Y%m%d")}
+
+
+def schedule_departures(slugs, station_id, d, kind="dep"):
+    """Every scheduled call at a station during calendar day d (00:00-24:00), purely from the timetable.
+
+    Includes after-midnight trips of the previous service day (GTFS times >= 24:00). No real-time data."""
+    col = "dep" if kind == "dep" else "arr"
+    cmp_ = "s2.seq>st.seq" if kind == "dep" else "s2.seq<st.seq"
+    out, found = [], False
+    for slug in slugs:
+        db = DBS[slug]
+        stops = db.station_stops(station_id)
+        if not stops:
+            continue
+        found = True
+        ph = ",".join("?" * len(stops))
+        for sd, lo, hi in ((d - timedelta(days=1), 86400, 2 * 86400), (d, 0, 86400)):
+            active = db.active_services(sd)
+            if not active:
+                continue
+            mid = service_midnight(sd)
+            sql = ("SELECT st.seq, st.stop_id, st.%s AS tm, t.tix, t.trip_id, t.route_id, t.service_id, t.headsign "
+                   "FROM stop_times st JOIN trips t ON t.tix=st.tix "
+                   "WHERE st.stop_id IN (%s) AND st.%s >= ? AND st.%s < ? "
+                   "AND EXISTS (SELECT 1 FROM stop_times s2 WHERE s2.tix=st.tix AND %s)" % (col, ph, col, col, cmp_))
+            for r in db.q(sql, (*stops, lo, hi)):
+                if r["service_id"] not in active:
+                    continue
+                li = line_info(db, r["route_id"])
+                sched = mid + r["tm"]
+                out.append({"agency": slug, "trip_id": r["trip_id"], "route_id": r["route_id"], "line": li["line"],
+                            "color": li["color"], "text_color": li["text_color"], "mode": li["mode"],
+                            "headsign": r["headsign"] or lb_headsign(slug, r["tix"]) or li["long"],
+                            "sched": sched, "expected": sched, "delay": 0, "rt": None, "cancelled": False,
+                            "date": sd.strftime("%Y%m%d"), "stop_id": r["stop_id"]})
+    if not found:
+        return None
+    out.sort(key=lambda x: (x["sched"], _natkey(x["line"])))
+    return out[:SCHEDULE_MAX_ROWS]
+
+
+def route_schedule(slug, route_id, d):
+    """Trips of a line running on calendar day d, grouped by direction (timetable only)."""
+    db = DBS[slug]
+    groups = {}
+    for sd, lo, hi in ((d - timedelta(days=1), 86400, 2 * 86400), (d, 0, 86400)):
+        active = db.active_services(sd)
+        if not active:
+            continue
+        mid = service_midnight(sd)
+        sql = ("SELECT t.tix, t.trip_id, t.service_id, t.headsign, t.direction, "
+               "(SELECT s.dep FROM stop_times s WHERE s.tix=t.tix ORDER BY s.seq LIMIT 1) AS first_dep, "
+               "(SELECT s.arr FROM stop_times s WHERE s.tix=t.tix ORDER BY s.seq DESC LIMIT 1) AS last_arr, "
+               "(SELECT n.name FROM stop_times s JOIN stops n ON n.stop_id=s.stop_id WHERE s.tix=t.tix ORDER BY s.seq LIMIT 1) AS from_name "
+               "FROM trips t WHERE t.route_id=?")
+        for r in db.q(sql, (route_id,)):
+            if r["service_id"] not in active or r["first_dep"] is None or not (lo <= r["first_dep"] < hi):
+                continue
+            groups.setdefault(r["direction"], []).append({
+                "trip_id": r["trip_id"], "dep": mid + r["first_dep"], "arr": mid + (r["last_arr"] or r["first_dep"]),
+                "from": r["from_name"], "headsign": r["headsign"] or lb_headsign(slug, r["tix"]) or "",
+                "date": sd.strftime("%Y%m%d")})
+    out = []
+    for direction, trips in sorted(groups.items(), key=lambda kv: (kv[0] if kv[0] is not None else 9)):
+        trips.sort(key=lambda x: x["dep"])
+        heads = {}
+        for x in trips:
+            heads[x["headsign"]] = heads.get(x["headsign"], 0) + 1
+        main = max(heads, key=heads.get) if heads else ""
+        out.append({"direction": direction, "headsign": main, "trips": trips[:SCHEDULE_MAX_ROWS]})
+    return out
+
+
 def departures(slug, station_id, kind="dep", limit=15, now=None):
     """Next calls at a station, with real-time data merged in. Lurraldebus stops are refreshed from
     lurraldebus.eus first (cached, shared and rate limited) when something is due in the next hour or so,
@@ -1293,17 +1408,28 @@ def _estimated_vehicles(slug, info, db, tus, now):
 
 # --------------------------------------------------------------------------- trip / route / stations
 
-def trip_detail(slug, trip_id, date_str=None, now=None):
+def trip_detail(slug, trip_id, date_str=None, now=None, sched_only=False):
+    """Stops of a trip. sched_only=True gives the pure timetable of service day date_str (no real-time)."""
     now = int(now or time.time())
     db = DBS[slug]
     trip = db.trip_by_id(trip_id)
     if not trip:
         return None
     rows = db.trip_stop_times(trip["tix"])
-    d = resolve_service_date(db, trip, rows, now, date_str)
-    refresh([slug], ["trips"])
-    tus = tu_index(slug)
-    tu = pick_tu(tus.get(trip_id), d) if tus else None
+    if sched_only:
+        d = parse_date(date_str)
+        if d is None:
+            return {"error": "bad_date"}
+        lo, hi = date_limits([slug])
+        # the service day may start the day before the selected calendar day (after-midnight trips)
+        if not (lo - timedelta(days=1) <= d <= hi):
+            return {"error": "date_out_of_range"}
+        tu, tus = None, {}
+    else:
+        d = resolve_service_date(db, trip, rows, now, date_str)
+        refresh([slug], ["trips"])
+        tus = tu_index(slug)
+        tu = pick_tu(tus.get(trip_id), d) if tus else None
     eff, canc = effective_times(slug, rows, d, tu)
     li = line_info(db, trip["route_id"])
     stops = [{"seq": e["seq"], "stop_id": e["stop_id"], "station_id": e["station_id"], "name": e["name"],
@@ -1314,6 +1440,7 @@ def trip_detail(slug, trip_id, date_str=None, now=None):
             "text_color": li["text_color"], "mode": li["mode"],
             "headsign": trip["headsign"] or lb_headsign(slug, trip["tix"]) or li["long"],
             "cancelled": canc, "has_rt": tu is not None, "date": d.strftime("%Y%m%d"), "stops": stops,
+            "sched_only": sched_only, "runs": trip["service_id"] in db.active_services(d),
             "occupancy": tu.get("occupancy") if tu else None,
             "shape": db.shape(trip["shape_id"])}
 

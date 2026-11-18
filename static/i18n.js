@@ -1,6 +1,7 @@
-/* Minimal i18n: English, Spanish, Basque */
+/* Minimal i18n: English, Spanish, Basque, French */
 const I18N = {
   en: {
+    today: 'Today', prev_day: 'Previous day', next_day: 'Next day', date_label: 'Date', services_n: '{n} services', no_service_date: 'No services on this date.', date_out_of_range: 'That date is outside the published timetable.', date_range_hint: 'Available: {a} to {b}', all_lines: 'All lines', trip_not_running: 'This trip does not run on that date.',
     updated_lbl: 'Updated', search_lines: 'Lines', search_ops: 'Operators', search_stops: 'Stops', filter_line: 'Line', alerts_hidden: '{n} alerts hidden by the current filters',
     upd_ago: 'Updated {n} {u} ago', unit_s: 's', unit_min: 'min',
     line_filter_ph: 'Filter line or operator (E1, A3411, Bizkaibus)…', only_line: 'Only this line', clear_filter: 'Clear filter',
@@ -42,6 +43,7 @@ const I18N = {
     rt_lb_none: 'No live arrival data for this stop right now. Times shown are from the timetable.', src_arrivals: 'Stop arrivals', st_idle: 'on demand',
   },
   es: {
+    today: 'Hoy', prev_day: 'Día anterior', next_day: 'Día siguiente', date_label: 'Fecha', services_n: '{n} servicios', no_service_date: 'No hay servicios en esta fecha.', date_out_of_range: 'Esa fecha queda fuera del horario publicado.', date_range_hint: 'Disponible: del {a} al {b}', all_lines: 'Todas las líneas', trip_not_running: 'Este viaje no circula en esa fecha.',
     updated_lbl: 'Actualizado', search_lines: 'Líneas', search_ops: 'Operadores', search_stops: 'Paradas', filter_line: 'Línea', alerts_hidden: '{n} avisos ocultos por los filtros actuales',
     upd_ago: 'Actualizado hace {n} {u}', unit_s: 's', unit_min: 'min',
     line_filter_ph: 'Filtrar línea u operador (E1, A3411, Bizkaibus)…', only_line: 'Solo esta línea', clear_filter: 'Quitar filtro',
@@ -83,6 +85,7 @@ const I18N = {
     rt_lb_none: 'No hay datos de llegada en vivo para esta parada ahora mismo. Se muestran los horarios teóricos.', src_arrivals: 'Llegadas en parada', st_idle: 'bajo demanda',
   },
   eu: {
+    today: 'Gaur', prev_day: 'Aurreko eguna', next_day: 'Hurrengo eguna', date_label: 'Data', services_n: '{n} zerbitzu', no_service_date: 'Ez dago zerbitzurik data honetan.', date_out_of_range: 'Data hori argitaratutako ordutegitik kanpo dago.', date_range_hint: 'Eskuragarri: {a} – {b}', all_lines: 'Linea guztiak', trip_not_running: 'Bidaia hau ez dabil data horretan.',
     updated_lbl: 'Eguneratua', search_lines: 'Lineak', search_ops: 'Operadoreak', search_stops: 'Geralekuak', filter_line: 'Linea', alerts_hidden: 'Uneko iragazkiek {n} abisu ezkutatzen dituzte',
     upd_ago: 'Duela {n} {u} eguneratua', unit_s: 'segundu', unit_min: 'minutu',
     line_filter_ph: 'Iragazi linea edo operadorea (E1, A3411, Bizkaibus)…', only_line: 'Linea hau soilik', clear_filter: 'Iragazkia kendu',
@@ -124,6 +127,7 @@ const I18N = {
     rt_lb_none: 'Une honetan ez dago zuzeneko helduera daturik geralekurako. Ordutegi teorikoa erakusten da.', src_arrivals: 'Geralekuko helduerak', st_idle: 'eskatzean',
   },
   fr: {
+    today: 'Aujourd’hui', prev_day: 'Jour précédent', next_day: 'Jour suivant', date_label: 'Date', services_n: '{n} services', no_service_date: 'Aucun service à cette date.', date_out_of_range: 'Cette date est hors des horaires publiés.', date_range_hint: 'Disponible : du {a} au {b}', all_lines: 'Toutes les lignes', trip_not_running: 'Ce trajet ne circule pas à cette date.',
     updated_lbl: 'Mis à jour', search_lines: 'Lignes', search_ops: 'Opérateurs', search_stops: 'Arrêts', filter_line: 'Ligne', alerts_hidden: '{n} alertes masquées par les filtres actuels',
     upd_ago: 'Mis à jour il y a {n} {u}', unit_s: 's', unit_min: 'min',
     line_filter_ph: 'Filtrer une ligne ou un opérateur (E1, A3411, Bizkaibus)…', only_line: 'Seulement cette ligne', clear_filter: 'Effacer le filtre',

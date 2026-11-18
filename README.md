@@ -57,6 +57,16 @@ index (`data-index.json`) reports a newer timetable. Real-time `.pb` feeds are f
 - Renfe feeds cover all of Spain and are cropped to Euskal Herria (a rectangle, so a few stations of neighbouring
   provinces come with it).
 
+## Timetable for another date
+
+The station and line views have a date bar at the top. In a station, today means live data; picking
+another date shows that day's theoretical timetable (no real-time data is merged). The line view
+always shows the timetable of its date (today by default); trips opened from it show the same date.
+The selectable range is today minus `SCHEDULE_PAST_DAYS` (default 7) to today plus `SCHEDULE_FUTURE_DAYS`
+(default 60), narrowed to the period each operator's published GTFS covers (calendar and calendar_dates),
+so it is often shorter, e.g. Euskotren publishes about 6 weeks.
+API: `/api/departures?...&date=YYYYMMDD`, `/api/route_schedule?agency&route&date`, `/api/trip?...&sched=1`.
+
 ## Lurraldebus live arrivals
 
 The seven "(Lurraldebus)" operators in Gipuzkoa publish empty GTFS-RT feeds, but lurraldebus.eus has a

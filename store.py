@@ -300,12 +300,34 @@ class AgencyDB:
         self._svc_cache = {}
         self._lock = threading.Lock()
         self._routes = None
+        self._range = None
 
     def reload(self):
         with self._lock:
             self.version += 1
             self._svc_cache = {}
             self._routes = None
+            self._range = None
+
+    def feed_range(self):
+        """(first, last) dates (YYYYMMDD strings) with any published service, or None.
+
+        From calendar start/end dates and the 'service added' exceptions. Open-ended calendar rows
+        (empty end) are ignored here; callers clamp to their own window anyway."""
+        if self._range is None:
+            lo, hi = [], []
+            for r in self.q("SELECT MIN(start) a, MAX(end) b FROM calendar WHERE start<>'' AND end<>''"):
+                if r["a"]:
+                    lo.append(r["a"])
+                if r["b"]:
+                    hi.append(r["b"])
+            for r in self.q("SELECT MIN(date) a, MAX(date) b FROM calendar_dates WHERE type=1"):
+                if r["a"]:
+                    lo.append(r["a"])
+                if r["b"]:
+                    hi.append(r["b"])
+            self._range = (min(lo), max(hi)) if lo and hi else False
+        return self._range or None
 
     @property
     def conn(self):

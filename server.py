@@ -64,27 +64,49 @@ def api(path, q):
         if not st:
             return {"error": "unknown station"}
         kind = "arr" if _s(q, "kind") == "arr" else "dep"
-        res = core.departures(slug, sid, kind, int(_f(q, "limit", 15)))
         info = core.AGENCIES[slug]
         peers = core.lb_peers(slug, sid)
+        modes = ",".join(sorted({m for p in peers for m in (core.DBS[p].station(sid)["modes"] or "").split(",") if m}))
+        names = " · ".join(core.AGENCIES[p]["name"] for p in peers)
+        lim = core.limits_payload(peers)
+        if _s(q, "date"):    # theoretical timetable of a whole day, no real-time data
+            d = core.parse_date(_s(q, "date"))
+            lo, hi = core.date_limits(peers)
+            if d is None or not (lo <= d <= hi):
+                return {"error": "date_out_of_range", "range": lim}
+            items = core.schedule_departures(peers, sid, d, kind) or []
+            return {"station": dict(st, agency=slug, agency_name=names, modes=modes or st["modes"]), "kind": kind,
+                    "time": int(time.time()), "items": items, "rt_status": "sched", "date": d.strftime("%Y%m%d"),
+                    "range": lim, "alerts": []}
+        res = core.departures(slug, sid, kind, int(_f(q, "limit", 15)))
         trips_stat = core.feed_stats(slug, "trips") if info["rt"].get("trips") else {"status": "none"}
         rt_status = core.lb_status(res or []) if core.is_lb(slug) else trips_stat["status"]
-        names = " · ".join(core.AGENCIES[p]["name"] for p in peers)
-        modes = ",".join(sorted({m for p in peers for m in (core.DBS[p].station(sid)["modes"] or "").split(",") if m}))
         return {"station": dict(st, agency=slug, agency_name=names, modes=modes or st["modes"]), "kind": kind,
-                "time": int(time.time()), "items": res or [], "rt_status": rt_status,
+                "time": int(time.time()), "items": res or [], "rt_status": rt_status, "range": lim,
                 "alerts": [a for p in peers for a in core.alerts(p) if _alert_applies(a, p, sid, [i for i in (res or []) if i["agency"] == p])]}
     if path == "/api/trip":
         slug = _s(q, "agency")
         if slug not in core.DBS:
             return {"error": "unknown agency"}
-        res = core.trip_detail(slug, _s(q, "trip"), _s(q, "date") or None)
+        res = core.trip_detail(slug, _s(q, "trip"), _s(q, "date") or None, sched_only=_s(q, "sched") == "1")
         return res or {"error": "unknown trip"}
+    if path == "/api/route_schedule":
+        slug = _s(q, "agency")
+        if slug not in core.DBS:
+            return {"error": "unknown agency"}
+        lim = core.limits_payload([slug])
+        d = core.parse_date(_s(q, "date"))
+        lo, hi = core.date_limits([slug])
+        if d is None or not (lo <= d <= hi):
+            return {"error": "date_out_of_range", "range": lim}
+        return {"date": d.strftime("%Y%m%d"), "range": lim, "directions": core.route_schedule(slug, _s(q, "route"), d)}
     if path == "/api/route":
         slug = _s(q, "agency")
         if slug not in core.DBS:
             return {"error": "unknown agency"}
-        return core.route_detail(slug, _s(q, "route"))
+        res = core.route_detail(slug, _s(q, "route"))
+        res["range"] = core.limits_payload([slug])
+        return res
     if path == "/api/routes":
         slug = _s(q, "agency")
         if slug not in core.DBS:

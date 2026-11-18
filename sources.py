@@ -23,6 +23,7 @@ Only the Python standard library is used.
 import json
 import logging
 import os
+import ssl
 import threading
 import time
 import urllib.error
@@ -33,6 +34,12 @@ import store
 log = logging.getLogger("moveuskadi.sources")
 
 UA = {"User-Agent": "mugitu/1.0 (personal use)"}
+
+# Python 3.13 turned on VERIFY_X509_STRICT by default, which rejects the certificate of app.mecatran.com
+# (Txik Txak) because it has no Authority Key Identifier. The chain and the host name are still verified;
+# only that extra RFC 5280 strictness is switched off.
+SSL_CTX = ssl.create_default_context()
+SSL_CTX.verify_flags &= ~getattr(ssl, "VERIFY_X509_STRICT", 0)
 TDG_DATASET = "https://transport.data.gouv.fr/api/datasets/%s"
 CACHE_FILE = os.path.join(store.DATA_DIR, "sources.json")
 MIN_REFRESH = 300      # seconds between two forced resolutions of the same operator
@@ -62,13 +69,13 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 def _get_json(url, timeout=30):
     req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with urllib.request.urlopen(req, timeout=timeout, context=SSL_CTX) as r:
         return json.loads(r.read())
 
 
 def _location(permalink, timeout=20):
     """The URL a data.gouv.fr permanent link currently redirects to (not followed, never downloaded)."""
-    opener = urllib.request.build_opener(_NoRedirect)
+    opener = urllib.request.build_opener(_NoRedirect, urllib.request.HTTPSHandler(context=SSL_CTX))
     try:
         opener.open(urllib.request.Request(permalink, headers=UA), timeout=timeout)
     except urllib.error.HTTPError as e:

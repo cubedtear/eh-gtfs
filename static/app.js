@@ -23,6 +23,7 @@ const ICONS = {
   pin: P('M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'),
   tune: P('M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z'),
   info: P('M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z'),
+  calendar: P('M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zM7 12h5v5H7z'),
   globe: P('M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.08 16zm2.95-8H5.08a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z'),
   sun: P('M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z'),
   moon: P('M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z'),
@@ -453,6 +454,52 @@ async function loadStations() {
 let stnTimer;
 map.on('moveend', () => { clearTimeout(stnTimer); stnTimer = setTimeout(loadStations, 250); });
 
+// ───────────────────────────────────────────────────────────── date picker (theoretical timetables)
+const ymdToDate = ymd => new Date(+ymd.slice(0, 4), +ymd.slice(4, 6) - 1, +ymd.slice(6, 8), 12);
+const dateToYmd = d => d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate());
+const ymdAdd = (ymd, n) => { const d = ymdToDate(ymd); d.setDate(d.getDate() + n); return dateToYmd(d); };
+const ymdIso = ymd => ymd.slice(0, 4) + '-' + ymd.slice(4, 6) + '-' + ymd.slice(6, 8);
+const ymdLong = ymd => ymdToDate(ymd).toLocaleDateString(S.lang, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const ymdShort = ymd => ymdToDate(ymd).toLocaleDateString(S.lang, { day: 'numeric', month: 'short', year: 'numeric' });
+const pickErr = e => t(e === 'bad_date' ? 'date_out_of_range' : e);
+const ymdMedium = ymd => ymdToDate(ymd).toLocaleDateString(S.lang, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+/** "Today", "Tomorrow", "In 3 days", "2 days ago" in the current language. */
+function ymdRelative(ymd, today) {
+  const diff = Math.round((ymdToDate(ymd) - ymdToDate(today)) / 86400000);
+  let txt;
+  try { txt = new Intl.RelativeTimeFormat(S.lang, { numeric: 'auto' }).format(diff, 'day'); } catch (e) { txt = ymdLong(ymd); }
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
+}
+/** Date selector at the top of the station and line views. The row never changes size: [<] [date] [>],
+ *  with the relative day and the "Today" shortcut on a line below (hidden, not removed, while on today). */
+function dateBar(v) {
+  const r = v.range;
+  if (!r) return '';
+  const cur = v.date || r.today;
+  const atMin = cur <= r.min, atMax = cur >= r.max, isToday = cur === r.today;
+  return `<div class="datebar${isToday ? '' : ' other'}">
+    <div class="datepill">
+      <button type="button" class="dstep" data-act="date-step" data-step="-1" ${atMin ? 'disabled' : ''} title="${t('prev_day')}" aria-label="${t('prev_day')}">${ic('back')}</button>
+      <button type="button" class="dpick" data-act="date-pick" title="${t('date_label')}" aria-label="${t('date_label')}: ${esc(ymdLong(cur))}">${ic('calendar')}<span>${esc(ymdMedium(cur))}</span></button>
+      <input type="date" class="date-hidden" data-act="date-set" value="${ymdIso(cur)}" min="${ymdIso(r.min)}" max="${ymdIso(r.max)}" tabindex="-1" aria-hidden="true">
+      <button type="button" class="dstep" data-act="date-step" data-step="1" ${atMax ? 'disabled' : ''} title="${t('next_day')}" aria-label="${t('next_day')}">${ic('chev')}</button>
+    </div>
+    <div class="dateinfo"><span class="rel">${esc(ymdRelative(cur, r.today))}</span>
+      <button type="button" class="linkbtn" data-act="date-today" ${isToday ? 'hidden' : ''}>${t('today')}</button></div></div>`;
+}
+/** Apply a new date to the open station / line view. In the station view today means live data (date = null);
+ *  the line view always shows the timetable of its date. */
+function applyDate(date) {
+  const v = S.view, r = v.range;
+  if (date && r && (date < r.min || date > r.max)) { toast(t('date_out_of_range')); return renderDateUi(); }
+  if (v.name === 'station') {
+    if (date && r && date === r.today) date = null;
+    if ((date || null) === (v.date || null)) return renderDateUi();
+    v.date = date; v.lineFilter = null; v.scroll = null; v.scrolled = false; v.data = null; render();
+  } else { v.date = date; drawRouteTT(); }
+}
+function renderDateUi() { if (S.view.name === 'station' && S.view.data) drawStationHeader($('#panel-body')); else if (S.view.name === 'route') drawRouteTT(); }
+
 // ───────────────────────────────────────────────────────────── navigation
 function resetOverlays() { clearRouteLayer(); selLayer.clearLayers(); S.selVeh = null; setFocus(null); }
 function setTab(tab) {
@@ -509,8 +556,8 @@ function render() {
 function setHash() {
   const v = S.view;
   let h = '';
-  if (v.name === 'station') h = '#s=' + encodeURIComponent(v.agency + '|' + v.id);
-  else if (v.name === 'trip') h = '#t=' + encodeURIComponent(v.agency + '|' + v.trip);
+  if (v.name === 'station') h = '#s=' + encodeURIComponent(v.agency + '|' + v.id + (v.date ? '|' + v.date : ''));
+  else if (v.name === 'trip') h = '#t=' + encodeURIComponent(v.agency + '|' + v.trip + (v.sched && v.date ? '|' + v.date : ''));
   history.replaceState(null, '', h || location.pathname);
 }
 const backBtn = () => `<button type="button" class="btn small" data-act="back">${ic('back')}${t('back')}</button>`;
@@ -555,11 +602,11 @@ async function loadFavNext() {
 }
 
 // ───────────────────────────────────────────────────────────── station view
-function openStation(agency, id) {
+function openStation(agency, id, date) {
   const cur = S.view;
-  if (cur.name === 'station' && cur.agency === agency && cur.id === id) return;
+  if (cur.name === 'station' && cur.agency === agency && cur.id === id && !date) return;
   resetOverlays();
-  const view = { name: 'station', agency, id, data: null };
+  const view = { name: 'station', agency, id, data: null, date: date || null };
   if (cur.name === 'station') { S.view = view; S.tab = S.tab === 'lines' ? 'lines' : 'stops'; expandSheet(); render(); }
   else go(view, S.tab === 'lines' ? 'lines' : 'stops');
 }
@@ -569,11 +616,16 @@ async function renderStation(body) {
   const my = ++depReq;
   if (!v.data) body.innerHTML = `<div class="empty">${t('loading')}</div>`;
   try {
-    const d = await api('departures', { agency: v.agency, station: v.id, kind: 'dep', limit: 20 });
+    const params = { agency: v.agency, station: v.id, kind: 'dep', limit: 20 };
+    if (v.date) params.date = v.date;
+    const d = await api('departures', params);
     if (my !== depReq || S.view !== v) return;
+    if (d.error === 'date_out_of_range' && v.date) { v.range = d.range; v.date = null; v.data = null; toast(t('date_out_of_range')); return renderStation(body); }
     if (d.error) { body.innerHTML = `<div class="empty">${esc(d.error)}</div>`; return; }
-    v.data = d; S.skew = d.time - Date.now() / 1000;
+    v.data = d; v.range = d.range; S.skew = d.time - Date.now() / 1000;
     drawStationHeader(body);
+    if (v.scroll != null) { body.scrollTop = v.scroll; v.scroll = null; v.scrolled = true; }
+    else if (v.date && !v.scrolled) { v.scrolled = true; scrollToUpcoming(body); }
     const st = d.station;
     selLayer.clearLayers();
     L.circleMarker([st.lat, st.lon], { radius: 13, color: cssv('--map-sel'), weight: 3, fillOpacity: .1, interactive: false }).addTo(selLayer);
@@ -590,12 +642,50 @@ function drawStationHeader(body) {
     <button type="button" class="star" data-act="fav" title="${fav ? t('remove_fav') : t('add_fav')}" aria-label="${fav ? t('remove_fav') : t('add_fav')}">${ic(fav ? 'star' : 'starO')}</button></div>
     <div class="row" style="margin-bottom:8px"><span class="mode-ic lg">${modeIcons(st.modes)}</span>
       <div class="grow"><div class="title">${esc(st.name)}</div><div class="muted small">${esc(st.agency_name)}</div></div></div>`;
+  h += dateBar(S.view);
+  if (d.date) {
+    h += schedList(d);
+    const keep = body.scrollTop;
+    body.innerHTML = h; body.scrollTop = keep;
+    return;
+  }
   h += rtNotice(d.rt_status, d.items);
   h += `<div id="dep-list">${depList(d)}</div>`;
   if ((d.alerts || []).length) h += `<details class="alerts-fold"><summary>${ic('warn')}${t('tab_alerts')} (${d.alerts.length})</summary>${d.alerts.map(a => alertCard(a, true)).join('')}</details>`;
   h += refreshRow(`${t('updated_lbl')} ${clockS(d.time)}`);
   const keep = body.scrollTop;
   body.innerHTML = h; body.scrollTop = keep;
+}
+/** Full-day theoretical timetable of a station: line filter + calls grouped by hour. */
+function schedList(d) {
+  const v = S.view;
+  const key = it => it.agency + '|' + it.route_id;
+  const lines = new Map();
+  d.items.forEach(it => { if (!lines.has(key(it))) lines.set(key(it), it); });
+  const items = v.lineFilter ? d.items.filter(it => key(it) === v.lineFilter) : d.items;
+  let h = '';
+  if (lines.size > 1) {
+    const sorted = [...lines.entries()].sort((a, b) => a[1].line.localeCompare(b[1].line, undefined, { numeric: true }));
+    h += `<div class="chips linechips"><button type="button" class="chip${v.lineFilter ? '' : ' on'}" data-act="line-filter" data-key="">${t('all_lines')}</button>` +
+      sorted.map(([k, it]) => `<button type="button" class="chip${v.lineFilter === k ? ' on' : ''}" data-act="line-filter" data-key="${esc(k)}" aria-pressed="${v.lineFilter === k}">${badge(it)}</button>`).join('') + '</div>';
+  }
+  if (!items.length) return h + `<div class="empty">${t('no_service_date')}</div>`;
+  h += `<div class="small muted" style="margin:8px 0 2px">${t('services_n').replace('{n}', items.length)}</div>`;
+  const now = nowTs(); let hour = null, marked = false;
+  for (const it of items) {
+    const hh = clock(it.sched).slice(0, 2);
+    if (hh !== hour) { hour = hh; h += `<h3 class="region hourh">${hh}:00</h3>`; }
+    const up = !marked && it.sched >= now && d.date === dateToYmd(new Date());
+    if (up) marked = true;
+    h += `<div class="dep" ${up ? 'id="upcoming" ' : ''}data-act="trip" data-sched="1" data-agency="${esc(it.agency)}" data-trip="${esc(it.trip_id)}" data-date="${esc(it.date)}">
+      ${badge(it)}<div class="grow"><div class="dest ellipsis">${esc(it.headsign || it.line)}</div></div>
+      <div class="when"><div class="big">${clock(it.sched)}</div></div></div>`;
+  }
+  return h;
+}
+function scrollToUpcoming(body) {
+  const el = $('#upcoming'); if (!el) return;
+  body.scrollTop = el.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 8;
 }
 function rtNotice(status, items) {
   const anyRt = (items || []).some(i => i.rt);
@@ -675,42 +765,44 @@ function drawAlerts() {
 }
 
 // ───────────────────────────────────────────────────────────── trip view
-function openTrip(agency, trip, date) {
-  go({ name: 'trip', agency, trip, date, data: null }, S.tab === 'lines' ? 'lines' : 'stops');
+function openTrip(agency, trip, date, sched) {
+  go({ name: 'trip', agency, trip, date, sched: !!sched, data: null }, S.tab === 'lines' ? 'lines' : 'stops');
 }
 let tripReq = 0;
 async function renderTrip(body) {
   const v = S.view; const my = ++tripReq;
   if (!v.data) body.innerHTML = `<div class="empty">${t('loading')}</div>`;
   try {
-    const d = await api('trip', { agency: v.agency, trip: v.trip, date: v.date || '' });
+    const d = await api('trip', { agency: v.agency, trip: v.trip, date: v.date || '', sched: v.sched ? '1' : '' });
     if (my !== tripReq || S.view !== v) return;
-    if (d.error) { body.innerHTML = `<div class="empty">${esc(d.error)}</div>`; return; }
+    if (d.error) { body.innerHTML = `<div class="row" style="margin-bottom:8px">${backBtn()}</div><div class="empty">${esc(t(d.error) === d.error ? d.error : pickErr(d.error))}</div>`; return; }
     v.data = d;
-    const veh = findVehicle(v);
+    const sched = !!d.sched_only;
+    const veh = sched ? null : findVehicle(v);
     if (veh && S.selVeh !== veh.id) S.selVeh = veh.id;
     const now = nowTs();
     const c = colors(d);
-    const idx = d.stops.findIndex(s => s.expected >= now - 30);
+    const idx = sched ? -2 : d.stops.findIndex(s => s.expected >= now - 30);
     let h = `<div class="row" style="margin-bottom:8px">${backBtn()}<div class="grow"></div>
       <button type="button" class="btn small" data-act="route" data-agency="${esc(d.agency)}" data-route="${esc(d.route_id)}">${ic('route')}${t('route_on_map')}</button></div>
-      <div class="row" style="margin-bottom:6px">${badge(d)}<div class="grow"><div class="title">${esc(d.headsign)}</div><div class="muted small">${esc(agName(d.agency))}</div></div></div>
-      ${vehCard(v)}`;
-    if (d.cancelled) h += `<div class="notice bad small">${ic('close', 'xs')}${t('cancelled')}</div>`;
+      <div class="row" style="margin-bottom:6px">${badge(d)}<div class="grow"><div class="title">${esc(d.headsign)}</div><div class="muted small">${esc(agName(d.agency))}${sched ? ' · ' + esc(ymdLong(d.date)) : ''}</div></div></div>
+      ${sched ? '' : vehCard(v)}`;
+    if (sched) h += d.runs ? '' : `<div class="notice warn small">${t('trip_not_running')}</div>`;
+    else if (d.cancelled) h += `<div class="notice bad small">${ic('close', 'xs')}${t('cancelled')}</div>`;
     else if (!d.has_rt) h += `<div class="notice small">${t('rt_none')}</div>`;
     h += `<ul class="tl" style="--c:${c.bg}">` + d.stops.map((s, i) => {
       const dl = s.expected - s.sched;
-      const cls = (i < idx || idx < 0 ? 'past' : '') + (i === idx ? ' here' : '') + (s.skipped ? ' skipped' : '');
+      const cls = (sched ? '' : (i < idx || idx < 0 ? 'past' : '') + (i === idx ? ' here' : '')) + (s.skipped ? ' skipped' : '');
       return `<li class="${cls}" data-act="station" data-agency="${esc(d.agency)}" data-id="${esc(s.station_id)}" data-lat="${s.lat}" data-lon="${s.lon}">
         <div class="grow nm">${esc(s.name)}</div>
         <div class="tm"><b>${clock(s.expected)}</b>${Math.abs(dl) >= 60 ? `<div class="small ${dl >= 300 ? 'late' : 'muted'}">${t('sched_short')} ${clock(s.sched)}</div>` : ''}</div></li>`;
     }).join('') + '</ul>';
-    h += refreshRow(`${t('updated_lbl')} ${clockS(now)}`);
+    if (!sched) h += refreshRow(`${t('updated_lbl')} ${clockS(now)}`);
     const keep = body.scrollTop;
     body.innerHTML = h; body.scrollTop = keep;
     // a live vehicle keeps the user's own zoom and position; only a scheduled trip is framed
     drawTripOnMap(d, idx, !v.fitted && !veh && !v.vid); v.fitted = true;
-    setFocus({ agency: d.agency, trip_id: d.trip_id });
+    setFocus({ agency: d.agency, trip_id: sched ? '' : d.trip_id });   // a timetable for another date shows no live vehicles
   } catch (e) { if (!v.data) body.innerHTML = `<div class="empty">${t('error')}</div>`; }
 }
 function drawTripOnMap(d, idx, fit) {
@@ -790,14 +882,14 @@ async function renderRoute(body) {
   try {
     const d = await api('route', { agency: v.agency, route: v.route });
     if (S.view !== v) return;
-    v.data = d;
+    v.data = d; v.range = d.range;
     const c = colors(d);
     const isOnly = S.filters.line && S.filters.line.agency === v.agency && S.filters.line.route_id === v.route;
     let h = `<div class="row" style="margin-bottom:8px">${backBtn()}<div class="grow"></div>
       <button type="button" class="btn small${isOnly ? ' primary' : ''}" data-act="${isOnly ? 'clear-line' : 'only-line'}" data-agency="${esc(v.agency)}" data-route="${esc(v.route)}" data-line="${esc(d.line)}">${isOnly ? t('clear_filter') : t('only_line')}</button></div>
       <div class="row" style="margin-bottom:8px">${badge(d)}<div class="grow"><div class="title">${esc(d.long || d.line)}</div><div class="muted small">${esc(agName(v.agency))}</div></div></div>`;
     const live = S.vehicles.filter(x => x.agency === v.agency && x.route_id === v.route).length;
-    h += `<div class="notice ${live ? 'ok' : ''} small">${live ? `${live} ${t('live_vehicles')}` : t('no_rt')}</div>`;
+    h += `<div class="notice ${live ? 'ok' : ''} small">${live ? `${live} ${t('live_vehicles')}` : t('no_rt')}</div><div id="route-tt"></div>`;
     for (const sh of d.shapes) {
       h += `<h2>${t('departs_from')} ${esc(sh.headsign || '')}</h2><ul class="tl" style="--c:${c.bg}">` +
         sh.stops.map(s => `<li data-act="station" data-agency="${esc(v.agency)}" data-id="${esc(s.station_id)}" data-lat="${s.lat}" data-lon="${s.lon}"><span class="nm">${esc(s.name)}</span></li>`).join('') + '</ul>';
@@ -815,7 +907,40 @@ async function renderRoute(body) {
     });
     if (bounds.isValid()) fitTo(bounds);
     setFocus({ agency: v.agency, route_id: v.route });
+    drawRouteTT();
   } catch (e) { body.innerHTML = `<div class="empty">${t('error')}</div>`; }
+}
+
+/** Timetable of the open line for the chosen date (date bar + departure times by hour, per direction). */
+let ttReq = 0;
+async function drawRouteTT() {
+  const v = S.view, el = $('#route-tt'); if (!el || v.name !== 'route' || !v.range) return;
+  if (!v.date) v.date = v.range.today;
+  const my = ++ttReq;
+  el.innerHTML = dateBar(v) + `<div id="route-tt-body"><div class="empty">${t('loading')}</div></div>`;
+  try {
+    const d = await api('route_schedule', { agency: v.agency, route: v.route, date: v.date });
+    if (my !== ttReq || S.view !== v) return;
+    if (d.error) {
+      v.range = d.range || v.range; toast(pickErr(d.error));
+      if (v.date !== v.range.today) { v.date = v.range.today; return drawRouteTT(); }
+      $('#route-tt-body').innerHTML = `<div class="empty">${t('no_service_date')}</div>`; return;
+    }
+    v.range = d.range;
+    const c = colors(v.data);
+    let h = '';
+    if (!d.directions.length) h += `<div class="empty">${t('no_service_date')}</div>`;
+    for (const g of d.directions) {
+      h += `<h2>${t('departs_from')} ${esc(g.headsign || '')} <span class="muted small">· ${t('services_n').replace('{n}', g.trips.length)}</span></h2>`;
+      const byHour = new Map();
+      g.trips.forEach(x => { const hh = clock(x.dep).slice(0, 2); if (!byHour.has(hh)) byHour.set(hh, []); byHour.get(hh).push(x); });
+      for (const [hh, list] of byHour) {
+        h += `<div class="hrow"><span class="hh num">${hh}</span><div class="chips">` + list.map(x =>
+          `<button type="button" class="tchip" style="--c:${c.bg}" data-act="trip" data-sched="1" data-agency="${esc(v.agency)}" data-trip="${esc(x.trip_id)}" data-date="${esc(x.date)}" title="${esc((x.from || '') + (x.headsign ? ' → ' + x.headsign : ''))}"><b class="num">${clock(x.dep).slice(3)}</b>${x.headsign && x.headsign !== g.headsign ? `<span class="small">${esc(x.headsign)}</span>` : ''}</button>`).join('') + '</div></div>';
+      }
+    }
+    $('#route-tt-body').innerHTML = h;
+  } catch (e) { const b = $('#route-tt-body'); if (b) b.innerHTML = `<div class="empty">${t('error')}</div>`; }
 }
 
 // ───────────────────────────────────────────────────────────── sources
@@ -957,7 +1082,13 @@ document.addEventListener('click', ev => {
     case 'station':
       if (d.lat && S.view.name === 'trip') showPoint(+d.lat, +d.lon);
       openStation(d.agency, d.id); break;
-    case 'trip': openTrip(d.agency, d.trip, d.date); break;
+    case 'trip':
+      if (S.view.name === 'station') S.view.scroll = $('#panel-body').scrollTop;
+      openTrip(d.agency, d.trip, d.date, d.sched === '1'); break;
+    case 'date-step': { const v = S.view; if (v.range) applyDate(ymdAdd(v.date || v.range.today, +d.step)); break; }
+    case 'date-today': applyDate(S.view.range.today); break;
+    case 'date-pick': { const i = $('input[data-act=date-set]'); if (i) { try { i.showPicker(); } catch (e) { i.focus(); i.click(); } } break; }
+    case 'line-filter': S.view.lineFilter = d.key || null; drawStationHeader($('#panel-body')); break;
     case 'route': openRoute(d.agency, d.route); break;
     case 'back': S.hist.length ? history.back() : back(); break;
     case 'reload': render(); break;
@@ -987,6 +1118,8 @@ document.addEventListener('change', ev => {
     if (!S.filters.agencies) S.filters.agencies = new Set(Object.keys(S.agencies));
     el.checked ? S.filters.agencies.add(el.dataset.id) : S.filters.agencies.delete(el.dataset.id);
     saveFilters(); drawVehicles(); renderMapFilter(); loadStations();
+  } else if (a === 'date-set') {
+    if (el.value) applyDate(el.value.replace(/-/g, '')); else renderDateUi();
   } else if (a === 'opt') {
     S.filters[el.dataset.opt] = el.checked; saveFilters();
     if (el.dataset.opt === 'showStops') loadStations(); else drawVehicles();
@@ -1014,13 +1147,15 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { po
 function refreshView() {
   const n = S.view.name;
   if (document.hidden) return;
+  if (n === 'station' && S.view.date) return;    // timetable of another date: nothing changes
+  if (n === 'trip' && S.view.sched) return;
   if (n === 'station' || n === 'trip') render();
   else if (n === 'home' && S.favs.length) loadFavNext();
 }
 setInterval(pollVehicles, POLL_VEHICLES_MS);
 setInterval(refreshView, POLL_VIEW_MS);
 setInterval(() => { // keep countdowns ticking between fetches
-  if (S.view.name === 'station' && S.view.data && !document.hidden) { const l = $('#dep-list'); if (l) l.innerHTML = depList(S.view.data); }
+  if (S.view.name === 'station' && S.view.data && !S.view.date && !document.hidden) { const l = $('#dep-list'); if (l) l.innerHTML = depList(S.view.data); }
 }, 10000);
 setInterval(loadAlerts, 120000);
 
@@ -1085,7 +1220,7 @@ async function boot() {
   }
   if (new URLSearchParams(location.search).get('near') === '1') { history.replaceState(null, '', location.pathname); locate(); }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { /* not on https/localhost: fine */ });
-  if (h.startsWith('s=')) { const [a, id] = h.slice(2).split('|'); if (a && id) openStation(a, id); }
-  else if (h.startsWith('t=')) { const [a, id] = h.slice(2).split('|'); if (a && id) openTrip(a, id, ''); }
+  if (h.startsWith('s=')) { const [a, id, dt] = h.slice(2).split('|'); if (a && id) openStation(a, id, /^\d{8}$/.test(dt || '') ? dt : null); }
+  else if (h.startsWith('t=')) { const [a, id, dt] = h.slice(2).split('|'); if (a && id) openTrip(a, id, dt || '', !!dt); }
 }
 boot();
