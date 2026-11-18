@@ -111,7 +111,9 @@ const modeIcons = modes => (modes || '').split(',').filter(Boolean).map(m => mod
 const stationModes = s => (s.modes || 'bus').split(',').filter(Boolean);
 
 async function api(path, params) {
-  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  const usp = new URLSearchParams();
+  for (const [k, val] of Object.entries(params || {})) Array.isArray(val) ? val.forEach(x => usp.append(k, x)) : usp.set(k, val);
+  const qs = params ? '?' + usp.toString() : '';
   const ctl = new AbortController();
   const to = setTimeout(() => ctl.abort(), 25000);
   try {
@@ -324,9 +326,11 @@ function clusterVehicles(list) {
 function clusterIcon(c) {
   const kinds = Object.keys(c.modes);
   const size = Math.round(Math.min(58, 30 + Math.sqrt(c.n) * 5));
-  const bg = kinds.length === 1 ? (MODE_COLOR[kinds[0]] || cssv('--ink')) : cssv('--ink');
+  // one mode: that mode's colour with text that contrasts with it; mixed: the theme's ink colours (dark on light, light on dark)
+  const mc = kinds.length === 1 ? MODE_COLOR[kinds[0]] : '';
+  const style = mc ? `background:${mc};color:${isHex(mc.slice(1)) && lum(mc.slice(1)) > .45 ? '#111' : '#fff'}` : '';
   return L.divIcon({ className: 'vclu', iconSize: [size, size],
-    html: `<div class="cl" style="width:${size}px;height:${size}px;background:${bg}"><b class="num">${c.n}</b></div>` });
+    html: `<div class="cl${mc ? '' : ' mix'}" style="width:${size}px;height:${size}px;${style}"><b class="num">${c.n}</b></div>` });
 }
 function drawClusters(list) {
   cluLayer.clearLayers();
@@ -541,7 +545,7 @@ function applyDate(date) {
   if (v.name === 'station') {
     if (date && r && date === r.today) date = null;
     if ((date || null) === (v.date || null)) return renderDateUi();
-    v.date = date; v.lineFilter = null; v.scroll = null; v.scrolled = false; v.data = null; render();
+    v.date = date; v.lineSel = null; v.scroll = null; v.scrolled = false; v.data = null; render();
   } else { v.date = date; drawRouteTT(); }
 }
 function renderDateUi() { if (S.view.name === 'station' && S.view.data) drawStationHeader($('#panel-body')); else if (S.view.name === 'route') drawRouteTT(); }
@@ -662,13 +666,17 @@ async function renderStation(body) {
   const my = ++depReq;
   if (!v.data) body.innerHTML = `<div class="empty">${t('loading')}</div>`;
   try {
+    // live: with a line picked the server returns only that line; otherwise it also sends the lines of the stop for the chips
     const params = { agency: v.agency, station: v.id, kind: 'dep', limit: 20 };
     if (v.date) params.date = v.date;
+    else if (v.lineSel && v.lineSel.size) params.line = [...v.lineSel];
+    else params.lines = '1';
     const d = await api('departures', params);
     if (my !== depReq || S.view !== v) return;
     if (d.error === 'date_out_of_range' && v.date) { v.range = d.range; v.date = null; v.data = null; toast(t('date_out_of_range')); return renderStation(body); }
     if (d.error) { body.innerHTML = `<div class="empty">${esc(d.error)}</div>`; return; }
     v.data = d; v.range = d.range; S.skew = d.time - Date.now() / 1000;
+    if (d.lines) v.chipItems = d.lines;     // the lines calling here today, for the filter chips
     drawStationHeader(body);
     if (v.scroll != null) { body.scrollTop = v.scroll; v.scroll = null; v.scrolled = true; }
     else if (v.date && !v.scrolled) { v.scrolled = true; scrollToUpcoming(body); }
@@ -681,7 +689,7 @@ async function renderStation(body) {
   }
 }
 function drawStationHeader(body) {
-  const d = S.view.data; const st = d.station;
+  const v0 = S.view, d = v0.data; const st = d.station;
   const fav = isFav(st.agency, st.station_id);
   let h = `<div class="row" style="margin-bottom:8px">${backBtn()}<div class="grow"></div>
     <button type="button" class="btn small" data-act="focus-stn">${ic('target')}${t('on_map')}</button>
@@ -695,7 +703,7 @@ function drawStationHeader(body) {
     body.innerHTML = h; body.scrollTop = keep;
     return;
   }
-  h += rtNotice(d.rt_status, d.items);
+  h += lineChips(v0.chipItems, v0.lineSel);
   h += `<div id="dep-list">${depList(d)}</div>`;
   if ((d.alerts || []).length) h += `<details class="alerts-fold"><summary>${ic('warn')}${t('tab_alerts')} (${d.alerts.length})</summary>${d.alerts.map(a => alertCard(a, true)).join('')}</details>`;
   h += refreshRow(`${t('updated_lbl')} ${clockS(d.time)}`);
@@ -703,18 +711,30 @@ function drawStationHeader(body) {
   body.innerHTML = h; body.scrollTop = keep;
 }
 /** Full-day theoretical timetable of a station: line filter + calls grouped by hour. */
+const lineKey = it => it.agency + '|' + it.route_id;
+/** One chip per line calling at the open stop (none when only one line does). Like the transport-mode chips:
+ *  nothing picked = every line is shown; picking one shows only it, picking more adds them, un-picking the last
+ *  one shows everything again. */
+function lineChips(items, sel) {
+  const lines = new Map();
+  (items || []).forEach(it => { if (!lines.has(lineKey(it))) lines.set(lineKey(it), it); });
+  if (lines.size < 2) return '';
+  const on = k => !!sel && sel.has(k);
+  const sorted = [...lines.entries()].sort((a, b) => a[1].line.localeCompare(b[1].line, undefined, { numeric: true }));
+  return `<div class="chips linechips${sel && sel.size ? ' sel' : ''}" role="group" aria-label="${t('filter_line')}">` +
+    sorted.map(([k, it]) => `<button type="button" class="lchip${on(k) ? ' on' : ''}" data-act="line-filter" data-key="${esc(k)}" aria-pressed="${on(k)}">${badge(it)}</button>`).join('') + '</div>';
+}
+function toggleLine(v, key) {
+  const keys = [...new Set((v.date ? v.data.items : (v.chipItems || v.data.items)).map(lineKey))];
+  const sel = v.lineSel || (v.lineSel = new Set());
+  if (!sel.size) sel.add(key);
+  else if (sel.has(key)) sel.delete(key);
+  else { sel.add(key); if (sel.size >= keys.length) sel.clear(); }
+}
 function schedList(d) {
   const v = S.view;
-  const key = it => it.agency + '|' + it.route_id;
-  const lines = new Map();
-  d.items.forEach(it => { if (!lines.has(key(it))) lines.set(key(it), it); });
-  const items = v.lineFilter ? d.items.filter(it => key(it) === v.lineFilter) : d.items;
-  let h = '';
-  if (lines.size > 1) {
-    const sorted = [...lines.entries()].sort((a, b) => a[1].line.localeCompare(b[1].line, undefined, { numeric: true }));
-    h += `<div class="chips linechips"><button type="button" class="chip${v.lineFilter ? '' : ' on'}" data-act="line-filter" data-key="">${t('all_lines')}</button>` +
-      sorted.map(([k, it]) => `<button type="button" class="chip${v.lineFilter === k ? ' on' : ''}" data-act="line-filter" data-key="${esc(k)}" aria-pressed="${v.lineFilter === k}">${badge(it)}</button>`).join('') + '</div>';
-  }
+  const items = v.lineSel && v.lineSel.size ? d.items.filter(it => v.lineSel.has(lineKey(it))) : d.items;
+  let h = lineChips(d.items, v.lineSel);
   if (!items.length) return h + `<div class="empty">${t('no_service_date')}</div>`;
   h += `<div class="small muted" style="margin:8px 0 2px">${t('services_n').replace('{n}', items.length)}</div>`;
   const now = nowTs(); let hour = null, marked = false;
@@ -732,13 +752,6 @@ function schedList(d) {
 function scrollToUpcoming(body) {
   const el = $('#upcoming'); if (!el) return;
   body.scrollTop = el.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 8;
-}
-function rtNotice(status, items) {
-  const anyRt = (items || []).some(i => i.rt);
-  if (status === 'live' && anyRt) return `<div class="notice ok small">${t('rt_live')}</div>`;
-  if (status === 'live') return '';
-  const key = { none: 'rt_none', empty: 'rt_empty', stale: 'rt_stale', error: 'rt_error', unknown: 'rt_empty', lb_none: 'rt_lb_none' }[status] || 'rt_none';
-  return `<div class="notice warn small">${t(key)}</div>`;
 }
 function depList(d) {
   if (!d.items.length) return `<div class="empty">${t('no_deps')}</div>`;
@@ -1126,6 +1139,7 @@ document.addEventListener('click', ev => {
   ev.stopPropagation();
   switch (a) {
     case 'station':
+      map.closePopup();
       if (d.lat && S.view.name === 'trip') showPoint(+d.lat, +d.lon);
       openStation(d.agency, d.id); break;
     case 'trip':
@@ -1134,7 +1148,10 @@ document.addEventListener('click', ev => {
     case 'date-step': { const v = S.view; if (v.range) applyDate(ymdAdd(v.date || v.range.today, +d.step)); break; }
     case 'date-today': applyDate(S.view.range.today); break;
     case 'date-pick': { const i = $('input[data-act=date-set]'); if (i) { try { i.showPicker(); } catch (e) { i.focus(); i.click(); } } break; }
-    case 'line-filter': S.view.lineFilter = d.key || null; drawStationHeader($('#panel-body')); break;
+    case 'line-filter':
+      toggleLine(S.view, d.key);
+      if (S.view.date) drawStationHeader($('#panel-body')); else render();      // live: the server filters, so ask again
+      break;
     case 'route': openRoute(d.agency, d.route); break;
     case 'back': S.hist.length ? history.back() : back(); break;
     case 'reload': render(); break;

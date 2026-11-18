@@ -331,7 +331,8 @@ table.src th { color: var(--muted); font-weight: 600; }
 #map.compact .veh .v { --s: .8; }
 #map.dense .veh .v { --s: .68; }
 .vclu { background: none; border: 0; }
-.vclu .cl { box-sizing: border-box; border-radius: 50%; border: 3px solid var(--map-ring); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-pin); font-size: var(--fs-m); opacity: .92; }
+.vclu .cl { box-sizing: border-box; border-radius: 50%; border: 3px solid var(--map-ring);  display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-pin); font-size: var(--fs-m); opacity: .92; }
+.vclu .cl.mix { background: var(--ink); color: var(--ink-text); }
 .toast { position: absolute; left: 50%; top: var(--sp-3); transform: translateX(-50%); background: var(--toast-bg); color: var(--toast-fg); padding: var(--sp-2) var(--sp-4); border-radius: 999px; font-size: var(--fs-m); z-index: 1000; pointer-events: none; max-width: calc(100% - 32px); text-align: center; }
 .me { width: 16px; height: 16px; border-radius: 50%; background: var(--me); border: 3px solid var(--map-ring); box-shadow: 0 0 0 6px color-mix(in srgb, var(--me) 28%, transparent); margin: -8px 0 0 -8px; }
 .leaflet-control-attribution { font-size: 11px; background: color-mix(in srgb, var(--surface) 85%, transparent) !important; color: var(--muted); }
@@ -364,8 +365,12 @@ table.src tr.region-row th { text-align: left; padding-top: var(--sp-4); color: 
 .dateinfo .rel { font-weight: 600; }
 .linkbtn { border: 0; background: none; padding: 4px 0 4px var(--sp-3); font-weight: 700; font-size: var(--fs-s); color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .linkbtn[hidden] { display: inline-block; visibility: hidden; }
-.linechips { margin: var(--sp-3) 0 var(--sp-2); }
-.linechips .chip { padding: 0 var(--sp-2); min-height: 40px; }
+.linechips { margin: var(--sp-3) 0 var(--sp-2); gap: var(--sp-2); }
+.lchip { display: inline-flex; padding: 3px; border: 0; border-radius: 12px; background: none; transition: opacity .15s; }
+.lchip .lb { height: 34px; min-width: 48px; font-size: var(--fs-body); }
+.lchip.on { box-shadow: 0 0 0 2px var(--ink); }
+.linechips.sel .lchip:not(.on) { opacity: .4; }
+@media (hover: hover) { .lchip:hover { opacity: 1 !important; } }
 h3.region.hourh { position: sticky; top: -1px; background: var(--bg); padding: var(--sp-2) 0; z-index: 1; margin-bottom: var(--sp-2); }
 .hrow { display: flex; gap: var(--sp-3); align-items: flex-start; margin-bottom: var(--sp-2); }
 .hrow .hh { width: 28px; flex: none; padding-top: 10px; font-weight: 700; color: var(--muted); text-align: right; }
@@ -374,3 +379,4 @@ h3.region.hourh { position: sticky; top: -1px; background: var(--bg); padding: v
 .tchip b { font-size: var(--fs-l); line-height: 1.2; }
 .tchip .small { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); line-height: 1.1; }
 @media (hover: hover) { .tchip:hover { border-color: var(--ink); } }
+:root[data-theme="dark"] .vclu .cl.mix { background: #3d444d; color: var(--text); }

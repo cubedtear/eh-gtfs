@@ -1085,6 +1085,28 @@ def schedule_departures(slugs, station_id, d, kind="dep"):
     return out[:SCHEDULE_MAX_ROWS]
 
 
+_lines_cache = {}
+
+
+def station_lines(slugs, station_id):
+    """Lines that call at a station today (for the line filter), one entry per line. Cached for ten minutes."""
+    today = today_local()
+    key = (tuple(slugs), station_id, today)
+    hit = _lines_cache.get(key)
+    if hit and time.time() - hit[0] < 600:
+        return hit[1]
+    seen = {}
+    for it in schedule_departures(slugs, station_id, today) or []:
+        k = it["agency"] + "|" + it["route_id"]
+        if k not in seen:
+            seen[k] = {f: it[f] for f in ("agency", "route_id", "line", "color", "text_color", "mode")}
+    out = sorted(seen.values(), key=lambda x: _natkey(x["line"]))
+    if len(_lines_cache) > 500:
+        _lines_cache.clear()
+    _lines_cache[key] = (time.time(), out)
+    return out
+
+
 def route_schedule(slug, route_id, d):
     """Trips of a line running on calendar day d, grouped by direction (timetable only)."""
     db = DBS[slug]
@@ -1117,23 +1139,27 @@ def route_schedule(slug, route_id, d):
     return out
 
 
-def departures(slug, station_id, kind="dep", limit=15, now=None):
+def departures(slug, station_id, kind="dep", limit=15, now=None, line=None):
     """Next calls at a station, with real-time data merged in. Lurraldebus stops are refreshed from
     lurraldebus.eus first (cached, shared and rate limited) when something is due in the next hour or so,
     and include the services of every Lurraldebus operator calling at the same stop."""
     peers = lb_peers(slug, station_id)
-    res = _departures_merged(peers, station_id, kind, limit, now)
+    res = _departures_merged(peers, station_id, kind, limit, now, line)
     if res and is_lb(slug) and not now:
         t = time.time()
         if res[0]["expected"] - t < 75 * 60 and lb_refresh_station(DBS[slug].station_stops(station_id)):
-            res = _departures_merged(peers, station_id, kind, limit, now)
+            res = _departures_merged(peers, station_id, kind, limit, now, line)
     return res
 
 
-def _departures_merged(slugs, station_id, kind, limit, now):
+def _departures_merged(slugs, station_id, kind, limit, now, line=None):
+    """line = set of (operator slug, route id): only the services of those lines."""
     out, found = [], False
     for s in slugs:
-        r = _departures(s, station_id, kind, limit, now)
+        routes = {rid for ag, rid in line if ag == s} if line else None
+        if line and not routes:
+            continue
+        r = _departures(s, station_id, kind, limit, now, routes)
         if r is not None:
             found = True
         for it in r or []:
@@ -1145,7 +1171,7 @@ def _departures_merged(slugs, station_id, kind, limit, now):
     return out[:limit]
 
 
-def _departures(slug, station_id, kind="dep", limit=15, now=None):
+def _departures(slug, station_id, kind="dep", limit=15, now=None, route_ids=None):
     now = int(now or time.time())
     db = DBS[slug]
     stops = db.station_stops(station_id)
@@ -1171,7 +1197,7 @@ def _departures(slug, station_id, kind="dep", limit=15, now=None):
                    "WHERE st.stop_id IN (%s) AND st.%s BETWEEN ? AND ? "
                    "AND EXISTS (SELECT 1 FROM stop_times s2 WHERE s2.tix=st.tix AND %s)" % (ph, col, cmp_))
             for r in db.q(sql, (*stops, lo, hi)):
-                if r["service_id"] not in active:
+                if r["service_id"] not in active or (route_ids and r["route_id"] not in route_ids):
                     continue
                 sched = mid + r[col]
                 tu = pick_tu(tus.get(r["trip_id"]), d) if tus else None
@@ -1604,7 +1630,7 @@ def search_stations(q, limit=40, lat=None, lon=None):
 
 def stations_in_bbox(s, w, n, e, limit=1500, rail_only=False):
     res = []
-    shared = set()      # Lurraldebus stops are listed once, however many operators serve them
+    shared = {}         # Lurraldebus stops are listed once, however many operators serve them
     for slug, info in AGENCIES.items():
         if not info["ready"]:
             continue
@@ -1615,10 +1641,13 @@ def stations_in_bbox(s, w, n, e, limit=1500, rail_only=False):
                 continue
             if lb:
                 if r["station_id"] in shared:
+                    shared[r["station_id"]]["agencies"].append(slug)      # the same stop, served by several operators
                     continue
-                shared.add(r["station_id"])
-            res.append({"agency": slug, "station_id": r["station_id"], "name": r["name"], "lat": r["lat"],
-                        "lon": r["lon"], "modes": r["modes"]})
+            entry = {"agency": slug, "agencies": [slug], "station_id": r["station_id"], "name": r["name"],
+                     "lat": r["lat"], "lon": r["lon"], "modes": r["modes"]}
+            if lb:
+                shared[r["station_id"]] = entry
+            res.append(entry)
     return res[:limit * 3]
 
 

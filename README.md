@@ -64,6 +64,12 @@ view of the whole territory shows where the service is running. Picking a line, 
 shows their vehicles one by one at any zoom. The thresholds are `STOP_MIN_ZOOM` and `VEHICLE_MIN_ZOOM` in
 `static/app.js`.
 
+## Stops on the map
+
+A stop is a dot coloured by its mode (bus, train, metro, tram, funicular); rail stops are slightly larger. In a
+stop's panel, the line chips work like the transport-mode chips: nothing picked shows every line, picking one shows
+only it, picking more adds them (live and by date) whenever two or more lines call there.
+
 ## Limited to Euskal Herria
 
 Everything shown is limited to Euskal Herria (outline: OpenStreetMap relation 11107464, simplified to about

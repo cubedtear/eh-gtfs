@@ -78,10 +78,12 @@ def api(path, q):
             return {"station": dict(st, agency=slug, agency_name=names, modes=modes or st["modes"]), "kind": kind,
                     "time": int(time.time()), "items": items, "rt_status": "sched", "date": d.strftime("%Y%m%d"),
                     "range": lim, "alerts": []}
-        res = core.departures(slug, sid, kind, int(_f(q, "limit", 15)))
+        line = {tuple(x.split("|", 1)) for x in q.get("line", []) if "|" in x} or None
+        res = core.departures(slug, sid, kind, int(_f(q, "limit", 15)), line=line)
         trips_stat = core.feed_stats(slug, "trips") if info["rt"].get("trips") else {"status": "none"}
         rt_status = core.lb_status(res or []) if core.is_lb(slug) else trips_stat["status"]
-        return {"station": dict(st, agency=slug, agency_name=names, modes=modes or st["modes"]), "kind": kind,
+        extra = {"lines": core.station_lines(peers, sid)} if _s(q, "lines") == "1" else {}
+        return {**extra, "station": dict(st, agency=slug, agency_name=names, modes=modes or st["modes"]), "kind": kind,
                 "time": int(time.time()), "items": res or [], "rt_status": rt_status, "range": lim,
                 "alerts": [a for p in peers for a in core.alerts(p) if _alert_applies(a, p, sid, [i for i in (res or []) if i["agency"] == p])]}
     if path == "/api/trip":
