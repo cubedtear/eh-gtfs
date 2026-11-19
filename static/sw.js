@@ -1,10 +1,11 @@
 'use strict';
 /* App-shell cache. The shell loads offline; live data (/api/*) and map tiles always go to the network. */
-const CACHE = 'eh-shell-v2';
+const CACHE = 'eh-shell-v3';
 const SHELL = [
   '/', '/index.html', '/style.css', '/app.js', '/i18n.js', '/manifest.webmanifest',
   '/icon.svg', '/icon-192.png', '/icon-512.png',
   '/vendor/leaflet/leaflet.css', '/vendor/leaflet/leaflet.js',
+  '/vendor/maplibre/maplibre-gl.css', '/vendor/maplibre/maplibre-gl.js', '/vendor/maplibre/leaflet-maplibre-gl.js',
 ];
 
 self.addEventListener('install', e => {

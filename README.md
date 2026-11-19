@@ -114,6 +114,26 @@ served `Cache-Control: public, max-age=31536000, immutable`; `index.html`, `sw.j
 hash are always revalidated (ETag, `304 Not Modified` when unchanged); `/api/*` is `no-store`. Nothing to do on
 deploy, the hashes are computed from the files at run time. The service worker keeps only the newest version of each file.
 
+## Map
+
+Two basemaps, chosen in the Filters tab:
+
+- **Simple** (default): [OpenFreeMap](https://openfreemap.org) vector tiles, free and without an API key. The style
+  follows the theme: **Positron** in the light theme, **Fiord** in the dark one. Place names are in **Basque**: the
+  tiles carry every OpenStreetMap language as `name:xx`, and `static/app.js` (`basqueLabels`) changes the style's label
+  expressions from the English name to `name:eu`, falling back to the local name where a place has no Basque name
+  (so the labels are only as Basque as OpenStreetMap is: Iruñea, Baiona, Miarritze, Jaka, Tutera, but Bilbao, whose
+  `name:eu` in OSM is "Bilbao"). The language of these labels is fixed and does not follow the interface language.
+- **Detailed**: the standard OpenStreetMap raster tiles (dark theme: inverted).
+
+The app draws the map with Leaflet; vector tiles are drawn by MapLibre GL inside it through the official
+[`@maplibre/maplibre-gl-leaflet`](https://github.com/maplibre/maplibre-gl-leaflet) binding. Both are vendored in
+`static/vendor/maplibre/` (maplibre-gl 5.24.1, binding 0.1.4, pinned; the 5.x line is used because 6.x is ES-module only
+and this app has no bundler). To update, download the same files from the same npm paths. The style is fetched from
+`tiles.openfreemap.org/styles/{positron,fiord}` when the map starts; changing theme swaps the style on the same map.
+If the browser has no WebGL or OpenFreeMap cannot be reached, the map falls back to the OpenStreetMap raster tiles.
+The dark style (Fiord) draws a few lighter rectangles over the open sea; they also appear with plain MapLibre and no code of this app, so they come from OpenFreeMap's style or data.
+
 ## Zoom levels
 
 All kinds of stops (bus, train, metro, tram, funicular) appear at the same zoom, 13. Live vehicles are drawn one by
@@ -209,7 +229,7 @@ To use another port, change the left number in `ports:`. The container runs as `
 1000:1000); only if you replace the `mugitu-data` volume with a host folder, set them in a `.env` next to the
 compose file to your own ids (the output of `id -u` and `id -g`, e.g. `APP_UID=1000`, `APP_GID=1000`) and make the folder writable by them.
 The container needs outbound HTTPS access to
-opendata.euskadi.eus, transport.data.gouv.fr, app.mecatran.com and, in the browser, the map tile servers. Put a reverse proxy (Caddy, nginx, Traefik) in
+opendata.euskadi.eus, transport.data.gouv.fr, app.mecatran.com and, in the browser, tiles.openfreemap.org and tile.openstreetmap.org. Put a reverse proxy (Caddy, nginx, Traefik) in
 front for HTTPS if you expose it publicly; installing the app on a phone requires HTTPS.
 
 First publish: GitHub keeps a new package private. After the first workflow run open the repository's

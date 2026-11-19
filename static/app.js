@@ -172,22 +172,59 @@ function applyI18n() {
 }
 
 // ───────────────────────────────────────────────────────────── map
-const map = L.map('map', { zoomControl: false, attributionControl: false, renderer: L.canvas({ tolerance: 12 }), tap: true }).fitBounds(EH_BOUNDS, { animate: false });
+const map = L.map('map', { zoomControl: false, attributionControl: false, renderer: L.canvas({ tolerance: 12 }), tap: true, maxZoom: 19 }).fitBounds(EH_BOUNDS, { animate: false });
 L.control.zoom({ position: 'bottomright' }).addTo(map);   // hidden on phones: pinch instead
 L.control.attribution({ prefix: false }).addTo(map);
-let baseLayers = [];
+let baseLayers = [], glLayer = null, basemapReq = 0;
 const OSM_CREDIT = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://opendata.euskadi.eus/">Open Data Euskadi</a>, <a href="https://transport.data.gouv.fr/">transport.data.gouv.fr</a>';
-const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
-/** "Simple" is Esri's quiet gray canvas (roads and place names only); "Detailed" is the standard OpenStreetMap style. */
-function applyBasemap() {
-  baseLayers.forEach(l => map.removeLayer(l));
-  const detailed = S.mapStyle === 'detailed', k = document.documentElement.dataset.theme === 'dark' ? 'Dark' : 'Light';
-  const esri = { maxNativeZoom: 16, maxZoom: 19, attribution: OSM_CREDIT + ', Tiles © Esri' };
-  baseLayers = detailed
-    ? [L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: OSM_CREDIT })]
-    : [L.tileLayer(`${ESRI}World_${k}_Gray_Base/MapServer/tile/{z}/{y}/{x}`, esri), L.tileLayer(`${ESRI}World_${k}_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxNativeZoom: 16, maxZoom: 19 })];
+const OFM_CREDIT = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">© OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, <a href="https://opendata.euskadi.eus/">Open Data Euskadi</a>, <a href="https://transport.data.gouv.fr/">transport.data.gouv.fr</a>';
+
+// "Simple" is OpenFreeMap's vector basemap: Positron (light theme) or Fiord (dark theme), with place names in Basque.
+// "Detailed" is the standard OpenStreetMap raster style. Vector tiles are drawn by MapLibre GL inside the Leaflet map.
+const OFM_STYLES = 'https://tiles.openfreemap.org/styles/';
+const ofmCache = {};          // 'positron' | 'fiord' -> Promise of the style (fetched once, already in Basque)
+/** The tiles carry every OSM language as name:xx. The styles label with name_en (English); use name:eu instead, and the
+ *  local name (the style's own fallback) where a place has no Basque name. */
+function basqueLabels(style) {
+  const swap = x => Array.isArray(x) ? (x.length === 2 && x[0] === 'get' && x[1] === 'name_en' ? ['get', 'name:eu'] : x.map(swap)) : x;
+  for (const l of style.layers) if (l.layout && l.layout['text-field'] !== undefined) l.layout['text-field'] = swap(l.layout['text-field']);
+  return style;
+}
+function ofmStyle(name) {
+  return ofmCache[name] || (ofmCache[name] = fetch(OFM_STYLES + name).then(r => {
+    if (!r.ok) throw new Error('OpenFreeMap style: HTTP ' + r.status);
+    return r.json();
+  }).then(basqueLabels).catch(e => { delete ofmCache[name]; throw e; }));
+}
+const webglOk = () => { try { return !!(window.maplibregl && document.createElement('canvas').getContext('webgl2')); } catch (e) { return false; } };
+function dropBasemap() {
+  baseLayers.forEach(l => map.removeLayer(l)); baseLayers = [];
+  if (glLayer) { map.removeLayer(glLayer); glLayer = null; }
+}
+function rasterBasemap() {
+  baseLayers = [L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: OSM_CREDIT })];
   baseLayers.forEach((l, n) => { l.addTo(map); l.setZIndex(n); });
-  $('#map').classList.toggle('osm', detailed);
+}
+async function applyBasemap() {
+  const my = ++basemapReq, el = $('#map');
+  const detailed = S.mapStyle === 'detailed';
+  el.classList.toggle('osm', detailed);
+  if (detailed) { dropBasemap(); rasterBasemap(); el.style.background = ''; return; }
+  // the simple style needs WebGL and OpenFreeMap; without them the map falls back to the OpenStreetMap raster tiles
+  const fallback = () => { if (my === basemapReq && !glLayer) { dropBasemap(); rasterBasemap(); el.classList.add('osm'); el.style.background = ''; } };
+  if (!webglOk()) { fallback(); return; }
+  try {
+    const style = await ofmStyle(document.documentElement.dataset.theme === 'dark' ? 'fiord' : 'positron');
+    if (my !== basemapReq) return;                           // the theme or the style changed meanwhile
+    const bg = (style.layers.find(l => l.type === 'background') || {}).paint;
+    el.style.background = bg && typeof bg['background-color'] === 'string' ? bg['background-color'] : '';   // no flash while tiles load
+    const copy = JSON.parse(JSON.stringify(style));          // MapLibre may modify what it is given
+    if (glLayer) glLayer.getMaplibreMap().setStyle(copy);    // theme switch: same map, same tiles, new colours
+    else {
+      dropBasemap();
+      glLayer = L.maplibreGL({ style: copy, attributionControl: { customAttribution: OFM_CREDIT } }).addTo(map);
+    }
+  } catch (e) { console.warn(e); fallback(); }
 }
 const vehLayer = L.layerGroup().addTo(map);
 const cluLayer = L.layerGroup().addTo(map);
