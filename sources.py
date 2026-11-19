@@ -4,8 +4,15 @@ Euskal Herria is served by feeds of several administrations. The Basque Governme
 its data-index in core.py. Everything else is configured here, one entry per operator, and is treated exactly
 like an Euskadi operator once its URLs are known: same importer, same real-time pipeline, same UI.
 
-Today: Ipar Euskal Herria (French Basque Country), published on https://transport.data.gouv.fr.
-Adding an operator is one more entry in SOURCES (Nafarroa will go here too).
+Today: Ipar Euskal Herria (French Basque Country) from https://transport.data.gouv.fr, Renfe straight from
+renfe.com, and Nafarroa from the Spanish Ministry's National Access Point (NAP, https://nap.transportes.gob.es).
+Adding an operator is one more entry in SOURCES.
+
+NAP (nap_dataset). Its API needs a personal key, sent in the `ApiKey` header. The key is read from the
+environment variable NAP_API_KEY and is never written in the code, the logs, data/sources.json or the repository.
+The API gives the current file of a dataset and, on request, a pre-signed download link that expires in 15
+minutes, so the link is asked for only when the file is downloaded (and is fetched without the key). Without the
+key, operators already imported keep working and nothing new is downloaded.
 
 API keys. Some feeds (Txik Txak, hosted by Mecatran) need `?apiKey=...` in the URL, and the key may change.
 Nothing is hard-coded: the URLs are resolved at run time from the portal, in this order:
@@ -41,6 +48,8 @@ UA = {"User-Agent": "mugitu/1.0 (personal use)"}
 SSL_CTX = ssl.create_default_context()
 SSL_CTX.verify_flags &= ~getattr(ssl, "VERIFY_X509_STRICT", 0)
 TDG_DATASET = "https://transport.data.gouv.fr/api/datasets/%s"
+NAP_API = "https://nap.transportes.gob.es/api/v2/"
+NAP_KEY_ENV = "NAP_API_KEY"
 CACHE_FILE = os.path.join(store.DATA_DIR, "sources.json")
 MIN_REFRESH = 300      # seconds between two forced resolutions of the same operator
 
@@ -80,6 +89,27 @@ SOURCES = [
         "region": "eh",
         "gtfs_url": "https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip",
         "replaces_index": True,
+    },
+    {
+        # Nafarroa, from the Spanish Ministry's National Access Point (dataset ids = ConjuntoDato/Detail/<id>).
+        "slug": "navarra_interurbano",
+        "name": "Interurbano de Navarra",
+        "region": "nav",
+        "nap_dataset": 963,           # Autobus interurbano de Navarra (Gobierno de Navarra)
+        "quirks": {"headsign_town": True},   # the feed has no trip_headsign
+    },
+    {
+        "slug": "villavesas",
+        "name": "Villavesas (Comarca de Pamplona)",
+        "region": "nav",
+        "nap_dataset": 976,           # Autobus Comarca de Pamplona (Infotuc)
+    },
+    {
+        # ALSA publishes one national GTFS: the importer keeps only the trips that call inside Euskal Herria.
+        "slug": "alsa",
+        "name": "ALSA",
+        "region": "eh",
+        "nap_dataset": 932,           # ALSA autobuses
     },
 ]
 
@@ -133,10 +163,19 @@ def _save_cache(cache):
         log.warning("cannot save %s: %s", CACHE_FILE, e)
 
 
+def source_label(src):
+    """Where an operator's data comes from (shown nowhere secret; used by core for 'is this the MovEuskadi index')."""
+    if src.get("nap_dataset"):
+        return "nap.transportes.gob.es"
+    return "renfe.com" if src.get("gtfs_url") else "transport.data.gouv.fr"
+
+
 def resolve(src):
     """Current URLs of one operator: {"gtfs": url, "stamp": str, "rt": {"trips": url, "alerts": url}} or None.
 
     `stamp` changes when the publisher updates the timetable (the importer re-imports on change)."""
+    if src.get("nap_dataset"):
+        return _resolve_nap(src)
     if src.get("gtfs_url"):
         return _resolve_direct(src)
     with _lock:
@@ -168,6 +207,68 @@ def resolve(src):
             return None
         return {"gtfs": merged["gtfs"]["url"], "stamp": merged["gtfs"].get("stamp", ""),
                 "rt": {k: merged[k]["url"] for k in ("trips", "alerts") if k in merged}}
+
+
+# ---- National Access Point (Spanish Ministry of Transport)
+
+NAP_SCHEME = "nap://fichero/"
+
+
+def nap_key():
+    return os.environ.get(NAP_KEY_ENV, "").strip()
+
+
+def _nap_get(path):
+    """GET on the NAP API; returns the 'data' of the answer. Raises when there is no key (the key is not logged)."""
+    key = nap_key()
+    if not key:
+        raise RuntimeError("%s is not set" % NAP_KEY_ENV)
+    req = urllib.request.Request(NAP_API + path, headers=dict(UA, ApiKey=key, Accept="application/json"))
+    with urllib.request.urlopen(req, timeout=30, context=SSL_CTX) as r:
+        body = json.loads(r.read())
+    if body.get("success") is False:
+        raise RuntimeError("NAP: %s" % (body.get("message") or "request failed"))
+    return body.get("data")
+
+
+def _resolve_nap(src):
+    """Timetable file of a NAP dataset: pseudo URL 'nap://fichero/<id>' and the file's update date as stamp.
+
+    Falls back to what the last successful run saw (data/sources.json) when the API cannot be asked, e.g. no key
+    or the portal is down, so an operator that was already imported stays available."""
+    found = None
+    try:
+        ds = _nap_get("conjunto-dato/%d" % src["nap_dataset"]) or {}
+        files = [f for f in ds.get("ficheros", []) if "zip" in (f.get("nombreTipoFichero") or "").lower()]
+        if files:
+            # a valid file first, then the most recently updated one
+            f = max(files, key=lambda f: (bool(f.get("esValido")), f.get("fechaActualizacion") or ""))
+            found = {"file": f["id"], "stamp": f.get("fechaActualizacion") or ""}
+        else:
+            log.warning("%s: NAP dataset %s has no GTFS file", src["slug"], src["nap_dataset"])
+    except Exception as e:
+        log.warning("%s: NAP not available (%s); using the last known file", src["slug"], e)
+    with _lock:
+        cache = _load_cache()
+        if found:
+            if cache.get(src["slug"]) != found:
+                cache[src["slug"]] = found
+                _save_cache(cache)
+        else:
+            found = cache.get(src["slug"])
+    if not found or not found.get("file"):
+        return None
+    return {"gtfs": NAP_SCHEME + str(found["file"]), "stamp": found.get("stamp", ""), "rt": {}}
+
+
+def nap_download_url(pseudo_url):
+    """Fresh pre-signed download link (valid 15 minutes) for a 'nap://fichero/<id>' file."""
+    fid = int(pseudo_url[len(NAP_SCHEME):])
+    data = _nap_get("fichero/%d/descarga" % fid) or {}
+    url = data.get("enlaceDescarga")
+    if not url or not url.startswith("https://"):
+        raise RuntimeError("NAP gave no download link for file %d" % fid)
+    return url
 
 
 def _resolve_direct(src):

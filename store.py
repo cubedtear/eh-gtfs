@@ -122,7 +122,9 @@ def _tidy(s):
 def import_gtfs(zip_path, db_path, slug, source_stamp="", opts=None):
     """Import a GTFS zip into a SQLite database. opts (per-source quirks):
     city_in_name: prefix stop names with the town from stops.txt city_name ("Tarnos - 11 novembre 1918"),
-    which is how the other operators of the area name their stops."""
+    which is how the other operators of the area name their stops.
+    headsign_town: trips without a headsign get the town of their last stop ("Pamplona/Iruña. Estación Bus" ->
+    "Pamplona/Iruña")."""
     opts = opts or {}
     tmp = db_path + ".tmp"
     if os.path.exists(tmp):
@@ -247,6 +249,12 @@ def import_gtfs(zip_path, db_path, slug, source_stamp="", opts=None):
 
     db.execute("CREATE INDEX st_stop ON stop_times(stop_id, dep)")
     db.execute("CREATE INDEX trips_route ON trips(route_id)")
+    if opts.get("headsign_town"):
+        # no trip_headsign in the feed and stops named "Town. street": the destination is the town of the last stop
+        last = db.execute("SELECT t.tix, (SELECT s.name FROM stop_times st JOIN stops s ON s.stop_id=st.stop_id "
+                          "WHERE st.tix=t.tix ORDER BY st.seq DESC LIMIT 1) FROM trips t WHERE t.headsign=''").fetchall()
+        db.executemany("UPDATE trips SET headsign=? WHERE tix=?",
+                       ((re.split(r"\.\s|\s-\s", n or "")[0].strip(), tix) for tix, n in last if n))
     if national:
         # Renfe leaves trip_headsign empty: use the name of the last stop the trip calls at
         db.execute("UPDATE trips SET headsign=COALESCE((SELECT s.name FROM stop_times st JOIN stops s ON s.stop_id=st.stop_id "

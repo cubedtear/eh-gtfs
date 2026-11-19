@@ -13,6 +13,7 @@ services:
       - mugitu-data:/app/data
     environment:
       TZ: Europe/Madrid
+      NAP_API_KEY: ${NAP_API_KEY:-}   # Nafarroa and ALSA timetables (Spanish Ministry NAP); set it in .env, see README
 
 volumes:
   mugitu-data:

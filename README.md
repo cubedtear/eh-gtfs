@@ -10,10 +10,30 @@ has a region (`eus`, `nav`, `ipar`) and the UI lists them side by side.
 |---|---|---|
 | Euskadi | Open Data Euskadi / MovEuskadi (`data-index.json`, read by `core.py`) | all of them (Euskotren, Bizkaibus, Lurraldebus, ...) |
 | Ipar Euskal Herria | transport.data.gouv.fr (configured in `sources.py`) | Txik Txak |
-| Nafarroa | no regional operator added yet (only Renfe long/medium distance lines that call there, e.g. Tudela) | - |
+| Nafarroa | Spanish Ministry's National Access Point, NAP (`sources.py`, needs `NAP_API_KEY`) | Interurbano de Navarra, Villavesas (Comarca de Pamplona) |
+| Several areas | NAP and renfe.com | ALSA (NAP), Renfe Cercanias, Renfe Larga y Media Distancia |
 
 Adding an operator outside the MovEuskadi index is one entry in `sources.py` (dataset id, resource ids, region and
 optional quirks). Everything after that (import, real time, UI) is shared.
+
+### NAP (Nafarroa, ALSA)
+
+`nap.transportes.gob.es` publishes timetables behind a personal API key. Get yours on the NAP site and give it to
+the app in the environment variable `NAP_API_KEY`; it is never written in the code, the logs or `data/`:
+
+    NAP_API_KEY=your-key python3 server.py            # local run
+    echo 'NAP_API_KEY=your-key' >> .env               # Docker: .env next to docker-compose.yml (git ignores it)
+
+How it works: the API (key sent in the `ApiKey` header) says which file is current for a dataset and when it was
+updated; that date is the change stamp, so a timetable is downloaded again only when it changes. The download link
+the API returns is pre-signed and expires after 15 minutes, so it is asked for just before downloading and fetched
+without the key. Without a key (or with a wrong one) nothing new is downloaded, and the operators already imported
+keep working; the log says `NAP_API_KEY is not set`.
+
+Datasets: 963 Interurbano de Navarra (Gobierno de Navarra), 976 Villavesas (Infotuc), 932 ALSA. They have no
+real-time feed. ALSA publishes one GTFS for all of Spain; only the trips that call inside Euskal Herria are kept
+(whole lines, so their far ends appear too). The Interurbano feed has no trip headsigns, so each trip gets the town
+of its last stop. Villavesas stops are named by street only (no town), as published.
 
 ### API keys (Txik Txak)
 

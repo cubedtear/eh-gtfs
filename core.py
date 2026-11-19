@@ -133,7 +133,7 @@ def load_extra_sources(only=None):
         rt = {k: v for k, v in res["rt"].items()}
         new[src["slug"]] = {"name": src["name"], "gtfs": res["gtfs"], "gtfs_stamp": res["stamp"], "rt": rt,
                             "slug": src["slug"], "region": src["region"], "quirks": dict(src.get("quirks") or {}),
-                            "source": "renfe.com" if src.get("gtfs_url") else "transport.data.gouv.fr"}
+                            "source": sources.source_label(src)}
     if new:
         _merge_agencies(new)
     return bool(new)
@@ -163,7 +163,12 @@ def _db_stamp(slug):
 
 
 def _download(url, dest):
-    req = urllib.request.Request(quote_url(url), headers=UA)
+    if url.startswith(sources.NAP_SCHEME):
+        # a pre-signed, short-lived link: asked for now, and used as it is (re-quoting would break its signature)
+        url = sources.nap_download_url(url)
+        req = urllib.request.Request(url, headers=UA)
+    else:
+        req = urllib.request.Request(quote_url(url), headers=UA)
     with urllib.request.urlopen(req, timeout=120, context=sources.SSL_CTX) as r, open(dest + ".part", "wb") as f:
         while True:
             chunk = r.read(1 << 20)
