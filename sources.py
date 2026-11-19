@@ -8,6 +8,9 @@ Today: Ipar Euskal Herria (French Basque Country) from https://transport.data.go
 renfe.com, and Nafarroa from the Spanish Ministry's National Access Point (NAP, https://nap.transportes.gob.es).
 Adding an operator is one more entry in SOURCES.
 
+Static feeds (static_feed). Operators that publish no GTFS at all, only PDFs (La Baztanesa), are typed once into
+feeds/<name>.json and turned into a GTFS at import time (see staticfeeds.py). Nothing is downloaded or resolved.
+
 NAP (nap_dataset). Its API needs a personal key, sent in the `ApiKey` header. The key is read from the
 environment variable NAP_API_KEY and is never written in the code, the logs, data/sources.json or the repository.
 The API gives the current file of a dataset and, on request, a pre-signed download link that expires in 15
@@ -36,6 +39,7 @@ import time
 import urllib.error
 import urllib.request
 
+import staticfeeds
 import store
 
 log = logging.getLogger("moveuskadi.sources")
@@ -105,6 +109,14 @@ SOURCES = [
         "nap_dataset": 976,           # Autobus Comarca de Pamplona (Infotuc)
     },
     {
+        # La Baztanesa (Elizondo - Pamplona - Donostia) publishes only PDF timetables, no GTFS: transcribed by hand
+        # into feeds/labaztanesa.json. Stop positions come from OpenStreetMap; see the file and the README.
+        "slug": "labaztanesa",
+        "name": "La Baztanesa",
+        "region": "nav",
+        "static_feed": "labaztanesa",
+    },
+    {
         # ALSA publishes one national GTFS: the importer keeps only the trips that call inside Euskal Herria.
         "slug": "alsa",
         "name": "ALSA",
@@ -165,6 +177,8 @@ def _save_cache(cache):
 
 def source_label(src):
     """Where an operator's data comes from (shown nowhere secret; used by core for 'is this the MovEuskadi index')."""
+    if src.get("static_feed"):
+        return "transcribed timetable"
     if src.get("nap_dataset"):
         return "nap.transportes.gob.es"
     return "renfe.com" if src.get("gtfs_url") else "transport.data.gouv.fr"
@@ -174,6 +188,8 @@ def resolve(src):
     """Current URLs of one operator: {"gtfs": url, "stamp": str, "rt": {"trips": url, "alerts": url}} or None.
 
     `stamp` changes when the publisher updates the timetable (the importer re-imports on change)."""
+    if src.get("static_feed"):
+        return {"gtfs": STATIC_SCHEME + src["static_feed"], "stamp": staticfeeds.stamp(src["static_feed"]), "rt": {}}
     if src.get("nap_dataset"):
         return _resolve_nap(src)
     if src.get("gtfs_url"):
@@ -212,6 +228,7 @@ def resolve(src):
 # ---- National Access Point (Spanish Ministry of Transport)
 
 NAP_SCHEME = "nap://fichero/"
+STATIC_SCHEME = "static://"
 
 
 def nap_key():

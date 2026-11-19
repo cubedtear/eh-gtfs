@@ -18,6 +18,7 @@ from datetime import date as date_cls, datetime, timedelta
 import gtfsrt
 import lurraldebus
 import sources
+import staticfeeds
 import store
 from store import TZ, AgencyDB, candidate_days, haversine, norm, service_midnight
 
@@ -163,6 +164,9 @@ def _db_stamp(slug):
 
 
 def _download(url, dest):
+    if url.startswith(sources.STATIC_SCHEME):
+        staticfeeds.build_zip(url[len(sources.STATIC_SCHEME):], dest)      # a hand-transcribed timetable: built, not fetched
+        return
     if url.startswith(sources.NAP_SCHEME):
         # a pre-signed, short-lived link: asked for now, and used as it is (re-quoting would break its signature)
         url = sources.nap_download_url(url)

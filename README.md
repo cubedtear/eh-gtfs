@@ -11,10 +11,40 @@ has a region (`eus`, `nav`, `ipar`) and the UI lists them side by side.
 | Euskadi | Open Data Euskadi / MovEuskadi (`data-index.json`, read by `core.py`) | all of them (Euskotren, Bizkaibus, Lurraldebus, ...) |
 | Ipar Euskal Herria | transport.data.gouv.fr (configured in `sources.py`) | Txik Txak |
 | Nafarroa | Spanish Ministry's National Access Point, NAP (`sources.py`, needs `NAP_API_KEY`) | Interurbano de Navarra, Villavesas (Comarca de Pamplona) |
+| Nafarroa | PDFs typed by hand (`feeds/`, see below) | La Baztanesa (Elizondo - Pamplona - Donostia) |
 | Several areas | NAP and renfe.com | ALSA (NAP), Renfe Cercanias, Renfe Larga y Media Distancia |
 
 Adding an operator outside the MovEuskadi index is one entry in `sources.py` (dataset id, resource ids, region and
 optional quirks). Everything after that (import, real time, UI) is shared.
+
+### La Baztanesa (no GTFS: transcribed from PDFs)
+
+La Baztanesa publishes three scanned PDFs (https://www.labaztanesa.com/c_horarios.html), images without a text layer,
+so there is nothing to download or parse. The timetable was read from the PDFs and typed once into
+`feeds/labaztanesa.json`; `staticfeeds.py` turns it into a GTFS at import time and from there it is an operator like
+any other (no real time).
+
+- **Checkable:** `tables` repeats each printed table column by column (a `null` is a grey cell), so every row can be
+  compared with the PDF by eye. `corrections` lists the two typos of the PDFs that were fixed (a swapped
+  Arraioz/Irurita pair on Sunday evenings and a `21.10`), `known_discrepancies` the one cell on which two PDFs disagree.
+- **Calendar:** "lunes a sábados laborables" and "domingos y festivos" as printed. The Sunday timetable also runs on the
+  2026 holidays of Navarra, and there is no service on 25 December and 1 January. **The file is valid for 2026 only**
+  (`validity.to`): when the operator publishes the next year, retype the changed rows, update `validity` and
+  `calendar`, and the operator is re-imported on the next start (the import stamp is a hash of the files).
+- **Mugaire is the transfer point** (green cells in the PDFs). Where two tables give identical times for the same
+  stretch of road, it is stored once so a stop never lists one bus twice: Elizondo to Donostia is stored from Elizondo
+  to Mugaire (the rest is the Pamplona to Donostia bus), Donostia to Pamplona from Mugaire to Pamplona (before that it is
+  the Donostia to Elizondo bus). The `twin` fields name the table each was checked against; the times agree to the minute.
+- **Stop positions** are not in the PDFs. Each stop has an `osm` reference and a `confidence`: *high* = an OpenStreetMap
+  stop with that name or address (often mapped as "Parada de la Baztanesa"), *medium* = right place, exact side or
+  position of the stop unknown (e.g. the clinic for "Ambulatorio Solchaga"), *low* = a guess among the OSM stops of the
+  town (Lesaka-Puente, Bera-Aguerra). Coordinates come from OpenStreetMap contributors (ODbL).
+- **Shapes** (`feeds/labaztanesa_shapes.json`) are the roads between the stops, drawn once with
+  `python3 tools/make_shapes.py labaztanesa` (public OSRM server, OpenStreetMap roads) and committed; the app never
+  calls the router. Run it again only when stops or patterns change.
+
+To add another operator that only has PDFs: copy the structure of `feeds/labaztanesa.json`, add an entry with
+`"static_feed": "<name>"` to `sources.py`, and run `tools/make_shapes.py <name>`.
 
 ### NAP (Nafarroa, ALSA)
 

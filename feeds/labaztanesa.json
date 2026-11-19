@@ -1,0 +1,211 @@
+{
+  "slug": "labaztanesa",
+  "name": "La Baztanesa",
+  "region": "nav",
+  "agency": {"name": "La Baztanesa", "url": "https://www.labaztanesa.com/", "phone": "948 58 01 29", "lang": "es"},
+  "source": {
+    "page": "https://www.labaztanesa.com/c_horarios.html",
+    "pdfs": [
+      "https://www.labaztanesa.com/pdf/horarios_pamplona_elizondo.pdf",
+      "https://www.labaztanesa.com/pdf/horarios_pamplona_donosti.pdf",
+      "https://www.labaztanesa.com/pdf/horarios_elizondo_donosti.pdf"
+    ],
+    "timetable_year": 2026,
+    "transcribed_on": "2026-11-19",
+    "about": "The operator publishes no GTFS, only three scanned PDFs (images, no text layer). The tables below repeat them cell by cell, in the same column order, so each can be checked against the PDF by eye. null is a grey cell: the bus does not call there."
+  },
+  "validity": {"from": "2026-01-01", "to": "2026-12-31"},
+  "services": {
+    "LS": "Lunes a sabados laborables / Astelehenetik larunbatera lanegunetan",
+    "SU": "Domingos y festivos / Igandeak eta jai egunetan"
+  },
+  "calendar": {
+    "_note": "Holidays of Navarra 2026 (BON 129, 30/06/2025, resolucion 390/2025); on them the Sunday timetable runs. There is no service on 25 December and 1 January (stated on the operator's page). Holidays local to a municipality or to Gipuzkoa are not included.",
+    "sunday_timetable_on": ["2026-01-06", "2026-03-19", "2026-04-02", "2026-04-03", "2026-04-06", "2026-05-01", "2026-08-15", "2026-10-12", "2026-11-02", "2026-12-03", "2026-12-08"],
+    "no_service_on": ["2026-01-01", "2026-12-25", "2027-01-01"]
+  },
+  "routes": {
+    "IRU-ELI": {"long": "Iruña/Pamplona - Mugaire - Elizondo", "color": "8B1E2D"},
+    "IRU-DON": {"long": "Iruña/Pamplona - Mugaire - Donostia/San Sebastián", "color": "1F6FB2"},
+    "ELI-DON": {"long": "Elizondo - Mugaire - Donostia/San Sebastián", "color": "2E7D32"}
+  },
+  "stops": {
+    "PAMP": {"name": "Pamplona/Iruña - Estación de Autobuses", "lat": 42.81131, "lon": -1.64592, "osm": "node/13687517346", "confidence": "high"},
+    "SOLC": {"name": "Pamplona/Iruña - Ambulatorio Solchaga", "lat": 42.81309, "lon": -1.63722, "osm": "node/7652899224", "confidence": "medium", "note": "position of the clinic (now Ambulatorio Doctor San Martín, C/ San Fermín 29); the exact stop is not mapped"},
+    "BURL": {"name": "Burlada/Burlata - Ronda de las Ventas 17", "lat": 42.82779, "lon": -1.61865, "osm": "node/985579507", "confidence": "high"},
+    "VILL": {"name": "Villava/Atarrabia - Gasolinera", "lat": 42.83507, "lon": -1.60909, "osm": "node/8200133107", "confidence": "medium", "note": "stop next to the petrol stations of Villava; the stop of the other direction is node/8200133106"},
+    "SORA": {"name": "Sorauren - Parada de bus", "lat": 42.86811, "lon": -1.60913, "osm": "node/6834537368", "confidence": "medium", "note": "OSM has two stops in Sorauren (this one and node/6834537367, 330 m north)"},
+    "OLAV": {"name": "Olave/Olabe - Mesón Olave", "lat": 42.88463, "lon": -1.60411, "osm": "node/6679986597", "confidence": "high", "note": "25 m from Mesón Olave"},
+    "ENDE": {"name": "Enderiz", "lat": 42.90578, "lon": -1.61287, "osm": "node/6679952148", "confidence": "high"},
+    "OSTI": {"name": "Ostiz", "lat": 42.91340, "lon": -1.61717, "osm": "node/6708157362", "confidence": "high"},
+    "BURU": {"name": "Burutain - Cruce", "lat": 42.93028, "lon": -1.60873, "osm": "node/6708218107", "confidence": "high"},
+    "ETUL": {"name": "Etulain - Cruce de Oreja", "lat": 42.94334, "lon": -1.61080, "osm": "node/8244888924", "confidence": "medium"},
+    "OLAG": {"name": "Olagüe", "lat": 42.96303, "lon": -1.61887, "osm": "node/6708218168", "confidence": "high"},
+    "LANT": {"name": "Lantz - Cruce", "lat": 42.98096, "lon": -1.62954, "osm": "node/8244888925", "confidence": "high"},
+    "ARTZ": {"name": "Arraitz - Bentak", "lat": 43.00897, "lon": -1.63610, "osm": "node/6708215216", "confidence": "high"},
+    "ALMA": {"name": "Almandoz - Plaza del Pueblo", "lat": 43.09031, "lon": -1.60571, "osm": "node/6726770089", "confidence": "high"},
+    "BERR": {"name": "Berroeta - Parking Caserío", "lat": 43.09848, "lon": -1.59240, "osm": "node/8244888927", "confidence": "high"},
+    "MUGA": {"name": "Mugaire (Oronoz-Mugaire)", "lat": 43.13734, "lon": -1.61048, "osm": "node/8244888928+node/6726770162", "confidence": "medium", "note": "midpoint of the two OSM stops of Mugaire (100 m apart, one per direction)"},
+    "NARB": {"name": "Narbarte", "lat": 43.13377, "lon": -1.62844, "osm": "node/8244888929", "confidence": "high"},
+    "LEGA": {"name": "Legasa", "lat": 43.13175, "lon": -1.64477, "osm": "node/1672869439", "confidence": "high"},
+    "DONE": {"name": "Doneztebe/Santesteban", "lat": 43.13192, "lon": -1.67233, "osm": "node/8244888930", "confidence": "high"},
+    "SUNB": {"name": "Sunbilla", "lat": 43.16348, "lon": -1.66947, "osm": "node/6710913666", "confidence": "high"},
+    "IGAN": {"name": "Igantzi - Bentak", "lat": 43.22843, "lon": -1.67777, "osm": "node/6710913664", "confidence": "high"},
+    "ETXA": {"name": "Etxalar - Hotel Venta Etxalar", "lat": 43.24204, "lon": -1.67044, "osm": "node/7177306387", "confidence": "high", "note": "position of the hotel, the stop is in front of it"},
+    "LESA": {"name": "Lesaka - Puente", "lat": 43.24685, "lon": -1.70757, "osm": "node/2329624746", "confidence": "low", "note": "unnamed OSM bus stop in Lesaka; which of the town's stops the operator calls 'Puente' is a guess"},
+    "BAGU": {"name": "Bera - Aguerra", "lat": 43.28066, "lon": -1.68162, "osm": "node/4487786946", "confidence": "low", "note": "the only other OSM stop in the centre of Bera; fits the order and timing of the table (1 min before Euskalduna)"},
+    "BEUS": {"name": "Bera - Euskalduna", "lat": 43.27946, "lon": -1.68833, "osm": "node/6710838860", "confidence": "medium", "note": "stop 'Tania', 40 m from Restaurante Euskalduna"},
+    "BCAJ": {"name": "Bera - Caja Rural", "lat": 43.28000, "lon": -1.68824, "osm": "node/8747151170", "confidence": "medium", "note": "position of the Caja Rural branch (Bidasoa kalea); the stop is on the same street"},
+    "BZAL": {"name": "Bera - Zalain (polígono, prox. nº 12)", "lat": 43.27560, "lon": -1.70254, "osm": "node/13860666346", "confidence": "medium"},
+    "BEHO": {"name": "Behobia", "lat": 43.34249, "lon": -1.76436, "osm": "node/2912763554", "confidence": "high"},
+    "IRVI": {"name": "Irun - Plaza San Juan (Visera)", "lat": 43.33923, "lon": -1.78855, "osm": "way/1277765429", "confidence": "high"},
+    "IRCO": {"name": "Irun - Paseo Colón 43 (Topo)", "lat": 43.34073, "lon": -1.79629, "osm": "node/540584790", "confidence": "high"},
+    "ERRE": {"name": "Errenteria - Avda. Navarra 26", "lat": 43.31504, "lon": -1.90219, "osm": "node/646892374", "confidence": "medium", "note": "position of building nº 26 (Nafarroa etorbidea)"},
+    "DONO": {"name": "Donostia/San Sebastián - Estación de Autobuses", "lat": 43.31694, "lon": -1.97746, "osm": "node/13692644138", "confidence": "high"},
+    "ARAI": {"name": "Arraioz - Puente", "lat": 43.14098, "lon": -1.56641, "osm": "way/317492210", "confidence": "high", "note": "mapped in OSM as 'Parada de la Baztanesa'"},
+    "IRUR": {"name": "Irurita - Plaza", "lat": 43.13099, "lon": -1.54684, "osm": "node/6726824379", "confidence": "medium", "note": "unnamed OSM bus stop at the centre of Irurita"},
+    "ELIZ": {"name": "Elizondo", "lat": 43.14634, "lon": -1.51625, "osm": "node/8244888934", "confidence": "high"}
+  },
+  "patterns": {
+    "_note": "Stops a bus passes, in order, including those a given trip skips (grey cells). Used to draw the line on the road; every trip's stops must be a subsequence of its pattern.",
+    "pam-eli": ["PAMP", "BURL", "VILL", "SORA", "OLAV", "ENDE", "OSTI", "BURU", "ETUL", "OLAG", "LANT", "ARTZ", "ALMA", "BERR", "MUGA", "ARAI", "IRUR", "ELIZ"],
+    "pam-eli-det": ["PAMP", "BURL", "VILL", "SORA", "OLAV", "ENDE", "OSTI", "BURU", "ETUL", "OLAG", "LANT", "ARTZ", "ALMA", "BERR", "MUGA", "NARB", "LEGA", "DONE", "ARAI", "IRUR", "ELIZ"],
+    "eli-pam": ["ELIZ", "IRUR", "ARAI", "MUGA", "BERR", "ALMA", "ARTZ", "LANT", "OLAG", "ETUL", "BURU", "OSTI", "ENDE", "OLAV", "SORA", "VILL", "BURL", "SOLC", "PAMP"],
+    "eli-pam-det": ["ELIZ", "IRUR", "ARAI", "MUGA", "NARB", "LEGA", "DONE", "BERR", "ALMA", "ARTZ", "LANT", "OLAG", "ETUL", "BURU", "OSTI", "ENDE", "OLAV", "SORA", "VILL", "BURL", "SOLC", "PAMP"],
+    "pam-don": ["PAMP", "BURL", "VILL", "SORA", "OLAV", "ENDE", "OSTI", "BURU", "ETUL", "OLAG", "LANT", "ARTZ", "ALMA", "BERR", "MUGA", "NARB", "LEGA", "DONE", "SUNB", "IGAN", "ETXA", "LESA", "BAGU", "BEUS", "BZAL", "BEHO", "IRVI", "IRCO", "ERRE", "DONO"],
+    "eli-mug": ["ELIZ", "IRUR", "ARAI", "MUGA"],
+    "eli-don": ["ELIZ", "IRUR", "ARAI", "MUGA", "NARB", "LEGA", "DONE", "SUNB", "IGAN", "ETXA", "LESA", "BAGU", "BEUS", "BZAL", "BEHO", "IRVI", "IRCO", "ERRE", "DONO"],
+    "don-eli": ["DONO", "ERRE", "IRVI", "BEHO", "BZAL", "BCAJ", "BAGU", "LESA", "ETXA", "IGAN", "SUNB", "DONE", "LEGA", "NARB", "MUGA", "ARAI", "IRUR", "ELIZ"],
+    "mug-pam": ["MUGA", "BERR", "ALMA", "ARTZ", "LANT", "OLAG", "ETUL", "BURU", "OSTI", "ENDE", "OLAV", "SORA", "VILL", "BURL", "SOLC", "PAMP"]
+  },
+  "tables": [
+    {
+      "id": "PE-LS", "pdf": "horarios_pamplona_elizondo", "title": "Salidas de Pamplona destino Elizondo, lunes a sabados laborables",
+      "route": "IRU-ELI", "direction": 0, "service": "LS", "headsign": "Elizondo", "pattern": "pam-eli",
+      "columns": ["PAMP", "BURL", "VILL", "SORA", "OLAV", "ENDE", "OSTI", "BURU", "ETUL", "OLAG", "LANT", "ARTZ", "ALMA", "BERR", "MUGA", "NARB", "LEGA", "DONE", "ARAI", "IRUR", "ELIZ"],
+      "rows": [
+        ["8:15", "8:19", "8:22", "8:27", "8:30", "8:31", "8:33", "8:35", "8:37", "8:40", "8:42", "8:45", "8:55", "9:00", "9:05", null, null, null, "9:10", "9:15", "9:20"],
+        ["13:15", "13:20", "13:22", "13:30", "13:31", "13:32", "13:35", "13:37", "13:39", "13:40", null, "13:45", "13:55", "13:57", "14:00", null, null, null, "14:05", "14:10", "14:15"],
+        {"pattern": "pam-eli-det", "times": ["15:30", "15:37", null, "15:45", "15:47", "15:48", "15:50", "15:52", "15:54", "15:55", null, "16:00", "16:10", "16:15", "16:20", "16:25", "16:28", "16:31", "16:40", "16:43", "16:50"]},
+        {"pattern": "pam-eli-det", "times": ["19:30", "19:40", "19:42", "19:47", "19:50", "19:51", "19:55", "20:00", "20:02", "20:05", null, "20:10", "20:20", "20:25", "20:30", "20:35", "20:38", "20:41", "20:50", "20:55", "21:00"]}
+      ]
+    },
+    {
+      "id": "PE-SU", "pdf": "horarios_pamplona_elizondo", "title": "Salidas de Pamplona destino Elizondo, domingos y festivos",
+      "route": "IRU-ELI", "direction": 0, "service": "SU", "headsign": "Elizondo", "pattern": "pam-eli",
+      "columns": ["PAMP", "BURL", "VILL", "SORA", "OLAV", "ENDE", "OSTI", "BURU", "ETUL", "OLAG", "LANT", "ARTZ", "ALMA", "BERR", "MUGA", "NARB", "LEGA", "DONE", "ARAI", "IRUR", "ELIZ"],
+      "rows": [
+        ["9:00", "9:04", "9:07", "9:12", "9:15", "9:16", "9:18", "9:20", "9:22", "9:25", "9:27", "9:30", "9:40", "9:45", "9:50", null, null, null, "9:55", "10:00", "10:05"],
+        {"pattern": "pam-eli-det", "times": ["19:30", "19:40", "19:42", null, "19:50", "19:51", "19:55", "20:00", "20:01", "20:05", null, "20:10", "20:20", "20:25", "20:30", "20:35", "20:38", "20:41", "20:50", "20:55", "21:00"]}
+      ]
+    },
+    {
+      "id": "EP-LS", "pdf": "horarios_pamplona_elizondo", "title": "Salidas de Elizondo destino Pamplona, lunes a sabados laborables",
+      "route": "IRU-ELI", "direction": 1, "service": "LS", "headsign": "Pamplona/Iruña", "pattern": "eli-pam",
+      "columns": ["ELIZ", "IRUR", "ARAI", "MUGA", "NARB", "LEGA", "DONE", "BERR", "ALMA", "ARTZ", "LANT", "OLAG", "ETUL", "BURU", "OSTI", "ENDE", "OLAV", "SORA", "VILL", "BURL", "SOLC", "PAMP"],
+      "rows": [
+        {"pattern": "eli-pam-det", "times": ["6:30", "6:35", "6:40", "6:45", "6:46", "6:48", "6:50", null, null, "7:20", null, null, null, "7:30", null, null, "7:40", null, null, "7:45", "7:51", "7:55"]},
+        ["7:30", "7:35", "7:37", "7:42", null, null, null, "7:55", "8:00", "8:05", "8:07", "8:10", "8:12", "8:15", "8:20", "8:21", "8:25", "8:30", "8:35", "8:40", "8:46", "8:50"],
+        {"pattern": "eli-pam-det", "times": ["13:45", "13:50", "13:55", "14:00", "14:02", "14:03", "14:05", "14:15", "14:20", "14:25", "14:27", "14:30", "14:32", "14:33", "14:35", "14:36", "14:40", "14:45", "14:50", "14:55", "15:01", "15:05"]},
+        ["17:45", "17:50", "17:55", "18:05", null, null, null, "18:10", "18:15", "18:25", "18:28", "18:30", "18:33", "18:35", "18:37", "18:38", "18:40", "18:43", "18:45", "18:50", "18:56", "19:00"]
+      ]
+    },
+    {
+      "id": "EP-SU", "pdf": "horarios_pamplona_elizondo", "title": "Salidas de Elizondo destino Pamplona, domingos y festivos",
+      "route": "IRU-ELI", "direction": 1, "service": "SU", "headsign": "Pamplona/Iruña", "pattern": "eli-pam",
+      "columns": ["ELIZ", "IRUR", "ARAI", "MUGA", "NARB", "LEGA", "DONE", "BERR", "ALMA", "ARTZ", "LANT", "OLAG", "ETUL", "BURU", "OSTI", "ENDE", "OLAV", "SORA", "VILL", "BURL", "SOLC", "PAMP"],
+      "rows": [
+        ["7:30", "7:35", "7:37", "7:42", null, null, null, "7:55", "8:00", "8:05", "8:07", "8:10", "8:12", "8:15", "8:20", "8:21", "8:25", "8:30", "8:35", "8:40", "8:46", "8:50"],
+        ["17:15", "17:20", "17:25", "17:35", null, null, null, "17:40", "17:45", "17:55", "17:58", "18:00", "18:03", "18:05", "18:07", "18:08", "18:10", "18:13", "18:15", "18:20", "18:26", "18:30"]
+      ]
+    },
+    {
+      "id": "PD-LS", "pdf": "horarios_pamplona_donosti", "title": "Salidas de Pamplona destino Donostia, lunes a sabados laborables",
+      "route": "IRU-DON", "direction": 0, "service": "LS", "headsign": "Donostia/San Sebastián", "pattern": "pam-don",
+      "columns": ["PAMP", "BURL", "VILL", "SORA", "OLAV", "ENDE", "OSTI", "BURU", "ETUL", "OLAG", "LANT", "ARTZ", "ALMA", "BERR", "MUGA", "NARB", "LEGA", "DONE", "SUNB", "IGAN", "ETXA", "LESA", "BAGU", "BEUS", "BZAL", "BEHO", "IRVI", "IRCO", "ERRE", "DONO"],
+      "rows": [
+        ["8:15", "8:20", "8:22", "8:27", "8:30", "8:31", "8:33", "8:35", "8:37", "8:40", "8:42", "8:45", "8:55", "8:57", "9:00", "9:02", "9:03", "9:05", "9:10", "9:18", "9:20", "9:22", "9:27", "9:28", "9:30", "9:45", "9:50", "9:52", "10:10", "10:20"],
+        ["13:15", "13:20", "13:22", "13:27", "13:30", "13:31", "13:33", "13:35", "13:37", "13:40", "13:42", "13:45", "13:55", "13:57", "14:00", "14:02", "14:03", "14:05", "14:10", "14:18", "14:20", "14:22", "14:27", "14:28", "14:30", "14:45", "14:50", "14:52", "15:10", "15:20"]
+      ]
+    },
+    {
+      "id": "PD-SU", "pdf": "horarios_pamplona_donosti", "title": "Salidas de Pamplona destino Donostia, domingos y festivos",
+      "route": "IRU-DON", "direction": 0, "service": "SU", "headsign": "Donostia/San Sebastián", "pattern": "pam-don",
+      "columns": ["PAMP", "BURL", "VILL", "SORA", "OLAV", "ENDE", "OSTI", "BURU", "ETUL", "OLAG", "LANT", "ARTZ", "ALMA", "BERR", "MUGA", "NARB", "LEGA", "DONE", "SUNB", "IGAN", "ETXA", "LESA", "BAGU", "BEUS", "BZAL", "BEHO", "IRVI", "IRCO", "ERRE", "DONO"],
+      "rows": [
+        ["9:00", "9:05", "9:07", "9:12", "9:15", "9:16", "9:18", "9:20", "9:22", "9:25", "9:27", "9:30", "9:40", "9:42", "9:45", "9:47", "9:48", "9:50", "9:55", "10:03", "10:05", "10:07", "10:12", "10:13", "10:15", "10:30", "10:35", "10:37", "10:55", "11:05"]
+      ]
+    },
+    {
+      "id": "ED-LS", "pdf": "horarios_elizondo_donosti", "title": "Salidas de Elizondo destino Donostia, lunes a sabados laborables (transbordo en Mugaire)",
+      "route": "ELI-DON", "direction": 0, "service": "LS", "headsign": "Donostia/San Sebastián · transbordo en Mugaire", "pattern": "eli-mug", "emit": "until:MUGA",
+      "twin": "PD-LS",
+      "columns": ["ELIZ", "IRUR", "ARAI", "MUGA", "NARB", "LEGA", "DONE", "SUNB", "IGAN", "ETXA", "LESA", "BAGU", "BEUS", "BZAL", "BEHO", "IRVI", "IRCO", "ERRE", "DONO"],
+      "rows": [
+        ["8:45", "8:50", "8:53", "9:00", "9:02", "9:03", "9:05", "9:10", "9:18", "9:20", "9:22", "9:27", "9:28", "9:30", "9:45", "9:50", "9:52", "10:10", "10:20"],
+        ["13:45", "13:50", "13:53", "14:00", "14:02", "14:03", "14:05", "14:10", "14:18", "14:20", "14:22", "14:27", "14:28", "14:30", "14:45", "14:50", "14:52", "15:10", "15:20"]
+      ]
+    },
+    {
+      "id": "ED-SU", "pdf": "horarios_elizondo_donosti", "title": "Salidas de Elizondo destino Donostia, domingos y festivos (transbordo en Mugaire)",
+      "route": "ELI-DON", "direction": 0, "service": "SU", "headsign": "Donostia/San Sebastián · transbordo en Mugaire", "pattern": "eli-mug", "emit": "until:MUGA",
+      "twin": "PD-SU",
+      "columns": ["ELIZ", "IRUR", "ARAI", "MUGA", "NARB", "LEGA", "DONE", "SUNB", "IGAN", "ETXA", "LESA", "BAGU", "BEUS", "BZAL", "BEHO", "IRVI", "IRCO", "ERRE", "DONO"],
+      "rows": [
+        ["9:30", "9:35", "9:38", "9:45", "9:47", "9:48", "9:50", "9:55", "10:03", "10:05", "10:07", "10:12", "10:13", "10:15", "10:30", "10:35", "10:37", "10:55", "11:05"],
+        {"emit": "full", "pattern": "eli-don", "twin": null, "times": ["17:15", "17:20", "17:23", "17:30", "17:32", "17:33", "17:35", "17:40", "17:48", "17:50", "17:52", "17:57", "17:58", "18:00", "18:15", "18:20", "18:22", "18:40", "18:50"]}
+      ]
+    },
+    {
+      "id": "DE-LS", "pdf": "horarios_elizondo_donosti", "title": "Salidas de Donostia destino Elizondo, lunes a sabados laborables",
+      "route": "ELI-DON", "direction": 1, "service": "LS", "headsign": "Elizondo", "pattern": "don-eli",
+      "twin": "DP-LS",
+      "columns": ["DONO", "ERRE", "IRVI", "BEHO", "BZAL", "BCAJ", "BAGU", "LESA", "ETXA", "IGAN", "SUNB", "DONE", "LEGA", "NARB", "MUGA", "ARAI", "IRUR", "ELIZ"],
+      "rows": [
+        {"headsign": "Elizondo · Pamplona/Iruña (transbordo en Mugaire)", "times": ["16:30", "16:40", "16:55", "17:00", "17:15", "17:20", "17:21", "17:27", "17:30", "17:32", "17:40", "17:45", "17:50", "17:52", "18:00", "18:05", "18:10", "18:15"]},
+        {"twin": null, "times": ["19:30", "19:40", "19:55", "20:00", "20:15", "20:20", "20:21", "20:27", "20:30", "20:32", "20:40", "20:45", "20:50", "20:52", "21:00", "21:05", "21:10", "21:15"]}
+      ]
+    },
+    {
+      "id": "DE-SU", "pdf": "horarios_elizondo_donosti", "title": "Salidas de Donostia destino Elizondo, domingos y festivos",
+      "route": "ELI-DON", "direction": 1, "service": "SU", "headsign": "Elizondo", "pattern": "don-eli",
+      "twin": "DP-SU",
+      "columns": ["DONO", "ERRE", "IRVI", "BEHO", "BZAL", "BCAJ", "BAGU", "LESA", "ETXA", "IGAN", "SUNB", "DONE", "LEGA", "NARB", "MUGA", "ARAI", "IRUR", "ELIZ"],
+      "rows": [
+        {"headsign": "Elizondo · Pamplona/Iruña (transbordo en Mugaire)", "times": ["16:00", "16:08", "16:25", "16:30", "16:45", "16:50", "16:51", "16:57", "17:00", "17:02", "17:15", "17:20", "17:25", "17:27", "17:30", "17:35", "17:40", "17:45"]},
+        {"twin": null, "times": ["19:30", "19:38", "19:55", "20:00", "20:15", "20:20", "20:21", "20:27", "20:30", "20:32", "20:45", "20:50", "20:55", "20:56", "21:00", "21:05", "21:10", "21:15"]}
+      ]
+    },
+    {
+      "id": "DP-LS", "pdf": "horarios_pamplona_donosti", "title": "Salidas de Donostia destino Pamplona, lunes a sabados laborables (transbordo en Mugaire)",
+      "route": "IRU-DON", "direction": 1, "service": "LS", "headsign": "Pamplona/Iruña", "pattern": "mug-pam", "emit": "from:MUGA",
+      "twin": "DE-LS",
+      "columns": ["DONO", "ERRE", "IRVI", "BEHO", "BZAL", "BCAJ", "BAGU", "LESA", "ETXA", "IGAN", "SUNB", "DONE", "LEGA", "NARB", "MUGA", "BERR", "ALMA", "ARTZ", "LANT", "OLAG", "ETUL", "BURU", "OSTI", "ENDE", "OLAV", "SORA", "VILL", "BURL", "SOLC", "PAMP"],
+      "rows": [
+        ["16:30", "16:40", "16:55", "17:00", "17:15", "17:20", "17:21", "17:27", "17:30", "17:32", "17:40", "17:45", "17:50", "17:52", "18:00", "18:05", "18:10", "18:17", "18:20", "18:23", "18:25", "18:26", "18:29", "18:30", "18:33", "18:35", "18:40", "18:45", "18:50", "18:55"]
+      ]
+    },
+    {
+      "id": "DP-SU", "pdf": "horarios_pamplona_donosti", "title": "Salidas de Donostia destino Pamplona, domingos y festivos (transbordo en Mugaire)",
+      "route": "IRU-DON", "direction": 1, "service": "SU", "headsign": "Pamplona/Iruña", "pattern": "mug-pam", "emit": "from:MUGA",
+      "twin": "DE-SU",
+      "columns": ["DONO", "ERRE", "IRVI", "BEHO", "BZAL", "BCAJ", "BAGU", "LESA", "ETXA", "IGAN", "SUNB", "DONE", "LEGA", "NARB", "MUGA", "BERR", "ALMA", "ARTZ", "LANT", "OLAG", "ETUL", "BURU", "OSTI", "ENDE", "OLAV", "SORA", "VILL", "BURL", "SOLC", "PAMP"],
+      "rows": [
+        ["16:00", "16:10", "16:25", "16:30", "16:45", "16:50", "16:51", "16:57", "17:00", "17:02", "17:15", "17:20", "17:25", "17:27", "17:30", "17:35", "17:40", "17:47", "17:50", "17:53", "17:55", "17:56", "17:59", "18:00", "18:03", "18:05", "18:10", "18:15", "18:20", "18:25"]
+      ]
+    }
+  ],
+  "notes": [
+    "Mugaire is the transfer point of the network ('transbordo en Mugaire', cells in green in the PDFs).",
+    "Where two printed tables give exactly the same times for the same stretch of road, that stretch is stored once, as the table that has it complete, so a stop does not list the same bus twice: Elizondo to Donostia is stored from Elizondo to Mugaire only (the rest is the Pamplona to Donostia bus, same times from Mugaire); Donostia to Pamplona is stored from Mugaire to Pamplona only (before Mugaire it is the Donostia to Elizondo bus). The 'twin' field names the table each one was checked against.",
+    "Columns 'Irun-Rotonda Montero' (Donostia to Pamplona and Donostia to Elizondo) and the second Arraioz/Irurita/Elizondo set of the Elizondo to Pamplona table are grey in every row and are left out.",
+    "Bera is served by different stops in each direction (towards Donostia: Aguerra, Euskalduna, Zalain; towards Elizondo/Pamplona: Zalain, Caja Rural, Aguerra)."
+  ],
+  "corrections": [
+    {"table": "PE-SU", "row": "19:30", "printed": "Arraioz 20:55, Irurita 20:50", "used": "Arraioz 20:50, Irurita 20:55", "why": "the printed values are swapped (Irurita is after Arraioz; the weekday 19:30 row has 20:50 and 20:55)"},
+    {"table": "DE-SU", "row": "19:30", "printed": "Irurita '21.10'", "used": "21:10", "why": "typo, a dot instead of a colon"}
+  ],
+  "known_discrepancies": [
+    {"between": "DE-SU 16:00 and DP-SU 16:00", "stop": "ERRE", "values": "16:08 in the Elizondo-Donostia PDF, 16:10 in the Pamplona-Donostia PDF", "used": "16:08"}
+  ]
+}
