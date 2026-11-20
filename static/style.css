@@ -322,7 +322,15 @@ table.src th { color: var(--muted); font-weight: 600; }
   box-shadow: var(--shadow-pin); letter-spacing: -.2px;
 }
 .veh .v .vt { position: relative; }
+/* three kinds of position, from most to least eye-catching:
+   gps   = real GPS fix: solid, coloured ring, strong shadow
+   est   = estimated from live arrival data: dashed border
+   sched = timetable only, no live data: faded, dotted, smaller, always below the others */
+.veh .v.gps { box-shadow: 0 0 0 2px var(--ac), 0 2px 8px rgba(20, 22, 26, .6); }
 .veh .v.est { border-style: dashed; }
+.veh .v.sched { border-style: dotted; opacity: .55; box-shadow: none; filter: saturate(.6); --s: .82; }
+#map.compact .veh .v.sched { --s: .66; }
+#map.dense .veh .v.sched { --s: .56; }
 .veh .v .arrow { position: absolute; left: 50%; top: 50%; width: 0; height: 0; margin: -7px 0 0 -5px; border: 5px solid transparent; border-bottom: 9px solid var(--ac, var(--ink)); }
 .veh .v.late { box-shadow: 0 0 0 3px var(--bad), var(--shadow-pin); }
 .veh .v.sq { border-radius: 9px; }
@@ -343,9 +351,11 @@ table.src th { color: var(--muted); font-weight: 600; }
   .leaflet-marker-icon.veh { transition: none; }
 }
 
-/* operators grouped by area (Euskadi, Nafarroa, Ipar Euskal Herria): same weight for each */
-h3.region { font-size: var(--fs-m); font-weight: 700; color: var(--muted); margin: var(--sp-4) 0 var(--sp-1); }
-h3.region:first-child { margin-top: 0; }
+/* the three kinds of vehicle position in the filters tab, each with a sample of its map marker */
+.checks.kinds label { min-height: 56px; }
+.checks.kinds .grow { display: flex; flex-direction: column; gap: 2px; }
+.kind-ic { flex: none; width: 46px; display: flex; justify-content: center; }
+.kind-ic .v { position: static; transform: none; min-width: 34px; background: var(--mode-bus); color: #fff; --ac: var(--mode-bus); }
 table.src tr.region-row th { text-align: left; padding-top: var(--sp-4); color: var(--text); font-size: var(--fs-m); }
 
 /* ---------- date picker / theoretical timetables */
@@ -379,4 +389,5 @@ h3.region.hourh { position: sticky; top: -1px; background: var(--bg); padding: v
 .tchip b { font-size: var(--fs-l); line-height: 1.2; }
 .tchip .small { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); line-height: 1.1; }
 @media (hover: hover) { .tchip:hover { border-color: var(--ink); } }
-:root[data-theme="dark"] .vclu .cl.mix { background: #3d444d; color: var(--text); }
+.vclu .cl.mix { background: #3d444d; color: #fcfbf9; }
+:root[data-theme="dark"] .vclu .cl.mix { color: var(--text); }

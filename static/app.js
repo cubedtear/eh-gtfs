@@ -68,7 +68,7 @@ const S = {
   vehicles: [],
   feeds: {},
   skew: 0,               // server time - client time (s)
-  filters: { modes: new Set(MODES), agencies: null, est: true, showStops: true, line: null },
+  filters: { modes: new Set(MODES), agencies: null, gps: true, est: true, sched: true, showStops: true, line: null },
   focus: null,           // {agency, route_id?, trip_id?} while a trip / route view is open
   selVeh: null,          // selected vehicle id
   favs: JSON.parse(localStorage.getItem('favs') || '[]'),
@@ -84,12 +84,12 @@ try {
   const f = JSON.parse(localStorage.getItem('filters2') || 'null');
   if (f) {
     S.filters.modes = new Set(f.modes); S.filters.agencies = f.agencies ? new Set(f.agencies) : null;
-    S.filters.est = f.est !== false; S.filters.showStops = f.showStops !== false; S.filters.line = f.line || null;
+    S.filters.gps = f.gps !== false; S.filters.est = f.est !== false; S.filters.sched = f.sched !== false; S.filters.showStops = f.showStops !== false; S.filters.line = f.line || null;
   }
 } catch (e) { /* ignore */ }
 function saveFilters() {
   const f = S.filters;
-  localStorage.setItem('filters2', JSON.stringify({ modes: [...f.modes], agencies: f.agencies ? [...f.agencies] : null, est: f.est, showStops: f.showStops, line: f.line }));
+  localStorage.setItem('filters2', JSON.stringify({ modes: [...f.modes], agencies: f.agencies ? [...f.agencies] : null, gps: f.gps, est: f.est, sched: f.sched, showStops: f.showStops, line: f.line }));
   updateAlertBadge();
 }
 
@@ -322,7 +322,9 @@ function vehicleVisible(v) {
   if (!f.modes.has(v.mode)) return false;
   if (f.agencies && !f.agencies.has(v.agency)) return false;
   if (f.line && !(v.agency === f.line.agency && v.route_id === f.line.route_id)) return false;
+  if (!v.est && !v.sched && !f.gps) return false;
   if (v.est && !f.est) return false;
+  if (v.sched && !f.sched) return false;
   const fo = S.focus;
   if (fo && S.selVeh !== v.id) {
     if (fo.trip_id) return v.agency === fo.agency && v.trip_id === fo.trip_id;
@@ -343,10 +345,10 @@ function vehicleIcon(v) {
     const edge = 1 / Math.sqrt(Math.pow(Math.sin(th) / rx, 2) + Math.pow(Math.cos(th) / ry, 2));
     arrow = `<span class="arrow" style="transform:rotate(${Math.round(v.bearing)}deg) translateY(-${Math.round(edge + 9)}px);--ac:${c.bg}"></span>`;
   }
-  const html = `<div class="v${v.est ? ' est' : ''}${late ? ' late' : ''}${v.mode === 'train' || v.mode === 'metro' || v.mode === 'tram' ? ' sq' : ''}" style="background:${c.bg};color:${c.fg};min-width:${w}px">${arrow}<span class="vt">${esc(txt)}</span></div>`;
+  const html = `<div class="v ${v.sched ? 'sched' : v.est ? 'est' : 'gps'}${late ? ' late' : ''}${v.mode === 'train' || v.mode === 'metro' || v.mode === 'tram' ? ' sq' : ''}" style="background:${c.bg};color:${c.fg};min-width:${w}px;--ac:${c.bg}">${arrow}<span class="vt">${esc(txt)}</span></div>`;
   return L.divIcon({ className: 'veh', html, iconSize: [0, 0] });
 }
-function vehKey(v) { return [v.line, v.color, v.mode, v.est, v.delay != null && v.delay >= 300, v.bearing != null ? Math.round(v.bearing / 5) : '-'].join('|'); }
+function vehKey(v) { return [v.line, v.color, v.mode, v.est, v.sched, v.delay != null && v.delay >= 300, v.bearing != null ? Math.round(v.bearing / 5) : '-'].join('|'); }
 
 /** Group vehicles into screen-grid cells: [{n, lat, lon, modes, pts}]. */
 function clusterVehicles(list) {
@@ -366,6 +368,7 @@ function clusterIcon(c) {
   // one mode: that mode's colour with text that contrasts with it; mixed: the theme's ink colours (dark on light, light on dark)
   const mc = kinds.length === 1 ? MODE_COLOR[kinds[0]] : '';
   const style = mc ? `background:${mc};color:${isHex(mc.slice(1)) && lum(mc.slice(1)) > .45 ? '#111' : '#fff'}` : '';
+  // every bubble counts all its vehicles (GPS, estimated and theoretical alike) and looks the same
   return L.divIcon({ className: 'vclu', iconSize: [size, size],
     html: `<div class="cl${mc ? '' : ' mix'}" style="width:${size}px;height:${size}px;${style}"><b class="num">${c.n}</b></div>` });
 }
@@ -402,7 +405,7 @@ function drawVehicles() {
       const k = vehKey(v);
       if (k !== e.key) { e.m.setIcon(vehicleIcon(v)); e.key = k; }
     }
-    e.m.setZIndexOffset(v.id === S.selVeh ? 2000 : 0);
+    e.m.setZIndexOffset(v.id === S.selVeh ? 2000 : v.sched ? -1000 : v.est ? 0 : 500);
   }
   for (const [id, e] of markers) if (!seen.has(id)) { vehLayer.removeLayer(e.m); markers.delete(id); }
   selVehLayer.clearLayers();
@@ -426,7 +429,7 @@ function vehCardInner(v) {
     ${v.speed != null ? `<div class="kv"><span class="muted">${t('speed')}</span><b>${v.speed} km/h</b></div>` : ''}
     ${v.occupancy != null ? `<div class="kv"><span class="muted">${t('occupancy')}</span><b>${occChip(v.occupancy)}</b></div>` : ''}
     ${v.ts ? `<div class="muted small" style="margin-top:4px">${updatedAgo(v.ts)}</div>` : ''}
-    <div class="muted small" style="margin-top:4px">${v.est ? t('position_est') : t('position_gps')}</div>`;
+    <div class="muted small" style="margin-top:4px">${v.sched ? t('position_sched') : v.est ? t('position_est') : t('position_gps')}</div>`;
 }
 function vehCard(view) {
   const v = findVehicle(view);
@@ -924,29 +927,35 @@ function renderLive(soft) {
     <h2>${t('map_style')}</h2>
     <div class="seg" role="group" aria-label="${t('map_style')}">${['simple', 'detailed'].map(k => `<button type="button" class="${S.mapStyle === k ? 'on' : ''}" data-act="mapstyle" data-style="${k}" aria-pressed="${S.mapStyle === k}">${t('style_' + k)}</button>`).join('')}</div>
     ${f.line ? `<h2>${t('filter_line')}</h2><div class="chips"><button type="button" class="chip on" data-act="clear-line"><b>${esc(f.line.line)}</b> ${esc(agName(f.line.agency))}${ic('close', 'xs')}</button></div>` : ''}
+    <h2>${t('veh_kinds')}</h2>
+    <div class="checks kinds">${['gps', 'est', 'sched'].map(k => `<label><input type="checkbox" data-act="opt" data-opt="${k}" ${f[k] ? 'checked' : ''}>
+      <span class="veh kind-ic" aria-hidden="true"><span class="v ${k}"><span class="vt">12</span></span></span>
+      <span class="grow"><b>${t('kind_' + k)}</b><span class="muted small">${t('kind_' + k + '_d')}</span></span>
+      <span class="small muted num" id="kc-${k}"></span></label>`).join('')}</div>
     <h2>${t('filter_agencies')}</h2>
     <div class="row wrap" style="margin-bottom:8px"><button type="button" class="btn small" data-act="ag-all">${t('all')}</button><button type="button" class="btn small" data-act="ag-none">${t('none')}</button></div>
     <div class="checks" id="ag-checks"></div>
     <div class="checks" style="margin-top:24px">
-      <label><input type="checkbox" data-act="opt" data-opt="showStops" ${f.showStops ? 'checked' : ''}><span class="grow">${t('show_stops')}</span></label>
-      <label><input type="checkbox" data-act="opt" data-opt="est" ${f.est ? 'checked' : ''}><span class="grow">${t('show_est')} <span class="muted small">${esc(estOperators())}</span></span></label></div></div>`;
+      <label><input type="checkbox" data-act="opt" data-opt="showStops" ${f.showStops ? 'checked' : ''}><span class="grow">${t('show_stops')}</span></label></div></div>`;
   updateLiveCounts();
-}
-/** Names of the operators whose buses/trains are placed on the map without GPS (from their trip updates). */
-function estOperators() {
-  const names = [...new Set(S.vehicles.filter(v => v.est).map(v => v.agency_name.replace(/ \(Lurraldebus\)$/, '')))].sort();
-  return names.length ? '(' + names.join(', ') + ')' : '';
 }
 function updateLiveCounts() {
   const el = $('#ag-checks'); if (!el) return;
-  const counts = {};
-  S.vehicles.forEach(v => counts[v.agency] = (counts[v.agency] || 0) + 1);
-  const list = Object.values(S.agencies).filter(a => a.ready && (a.rt.vehicles || a.rt.trips));
-  const row = (a, n) => `<label><input type="checkbox" data-act="ag" data-id="${esc(a.id)}" ${!S.filters.agencies || S.filters.agencies.has(a.id) ? 'checked' : ''}>
-    <span class="grow">${esc(a.name)}</span><span class="small ${n ? 'tag live' : 'muted'}">${n ? n + ' ' + t('live_vehicles') : t('no_rt')}</span></label>`;
-  const sorted = list.slice().sort((a, b) => (counts[b.id] ? 1 : 0) - (counts[a.id] ? 1 : 0) || a.name.localeCompare(b.name));
-  el.innerHTML = byRegion(sorted).map(([r, l]) => `<h3 class="region">${esc(regionName(r))}</h3>` + l.map(a => row(a, counts[a.id] || 0)).join('')).join('');
-  const vc = $('#veh-count'); if (vc) vc.textContent = markers.size;
+  const live = {}, theo = {}, kinds = { gps: 0, est: 0, sched: 0 };
+  S.vehicles.forEach(v => {
+    const k = v.sched ? 'sched' : v.est ? 'est' : 'gps'; kinds[k]++;
+    const c = v.sched ? theo : live; c[v.agency] = (c[v.agency] || 0) + 1;
+  });
+  for (const k in kinds) { const e = $('#kc-' + k); if (e) e.textContent = kinds[k]; }
+  // every operator, in one list: those with live vehicles first, then those drawn from the timetable, then the rest
+  const list = Object.values(S.agencies).filter(a => a.ready);
+  const rank = a => live[a.id] ? 0 : theo[a.id] ? 1 : 2;
+  const tag = a => live[a.id] ? `<span class="small tag live">${live[a.id]} ${t('live_vehicles')}</span>`
+    : theo[a.id] ? `<span class="small tag">${theo[a.id]} ${t('sched_vehicles')}</span>` : `<span class="small muted">${t('no_vehicles')}</span>`;
+  el.innerHTML = list.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name)).map(a =>
+    `<label><input type="checkbox" data-act="ag" data-id="${esc(a.id)}" ${!S.filters.agencies || S.filters.agencies.has(a.id) ? 'checked' : ''}>
+    <span class="grow">${esc(a.name)}</span>${tag(a)}</label>`).join('');
+  const vc = $('#veh-count'); if (vc) vc.textContent = S.vehicles.filter(vehicleVisible).length;
 }
 
 // ───────────────────────────────────────────────────────────── lines tab

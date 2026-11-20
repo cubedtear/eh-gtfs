@@ -17,6 +17,7 @@ from datetime import date as date_cls, datetime, timedelta
 
 import gtfsrt
 import lurraldebus
+import region
 import sources
 import staticfeeds
 import store
@@ -1406,8 +1407,9 @@ def vehicles(max_age=10):
 
 def _build_vehicles():
     now = int(time.time())
-    slugs = [s for s, i in AGENCIES.items() if i["ready"] and (i["rt"].get("vehicles") or i["rt"].get("trips") or is_lb(s))]
-    refresh(slugs, ["vehicles", "trips"])
+    slugs = [s for s, i in AGENCIES.items() if i["ready"] and s in DBS]
+    refresh([s for s in slugs if AGENCIES[s]["rt"].get("vehicles") or AGENCIES[s]["rt"].get("trips") or is_lb(s)],
+            ["vehicles", "trips"])
     out = []
     feeds = {}
     for slug in slugs:
@@ -1448,9 +1450,13 @@ def _build_vehicles():
                     "date": tinfo.get("start_date"),
                     "stop": _stop_name(db, v.get("stop_id")) if v.get("stop_id") else None,
                     "status": v.get("status"), "ts": fix_ts(slug, v.get("timestamp")), "delay": delay, "est": False,
+                    "sched": False, "kind": "gps",
                 })
             if not vlist and tus:
                 out.extend(_estimated_vehicles(slug, info, db, tus, now))
+            # no GPS and no live arrival data for this operator: draw where the timetable says its vehicles are
+            if not any(o["agency"] == slug for o in out) and not is_lb(slug):
+                out.extend(_scheduled_vehicles(slug, info, db, now))
         except Exception:
             log.exception("vehicle build failed for %s", slug)
     data = {"time": now, "vehicles": out, "feeds": feeds}
@@ -1492,8 +1498,56 @@ def _estimated_vehicles(slug, info, db, tus, now):
                 "headsign": trip["headsign"] or lb_headsign(slug, trip["tix"]) or li["long"],
                 "trip_id": tid, "date": d.strftime("%Y%m%d"),
                 "stop": pos[2], "status": 1 if pos[3] == "stopped" else 2, "ts": fix_ts(slug, tu.get("timestamp")),
-                "delay": delay, "est": True, "occupancy": tu.get("occupancy")})
+                "delay": delay, "est": True, "sched": False, "kind": "est", "occupancy": tu.get("occupancy")})
             break
+    return out
+
+
+_span_cache = {}
+
+
+def _trip_spans(slug, db):
+    """[(tix, trip_id, route_id, service_id, headsign, shape_id, first departure, last arrival)] of every trip."""
+    key = (slug, db.version)
+    if key not in _span_cache:
+        for k in [k for k in _span_cache if k[0] == slug]:
+            del _span_cache[k]
+        _span_cache[key] = [tuple(r) for r in db.q(
+            "SELECT t.tix, t.trip_id, t.route_id, t.service_id, t.headsign, t.shape_id, MIN(st.dep), MAX(st.arr) "
+            "FROM trips t JOIN stop_times st ON st.tix=t.tix GROUP BY t.tix") if r[6] is not None and r[7] is not None]
+    return _span_cache[key]
+
+
+def _scheduled_vehicles(slug, info, db, now):
+    """Theoretical vehicles: trips that should be running now according to the timetable alone."""
+    out = []
+    spans = _trip_spans(slug, db)
+    for d in candidate_days(now):
+        active = db.active_services(d)
+        if not active:
+            continue
+        rel = now - service_midnight(d)
+        for tix, tid, route_id, service_id, headsign, shape_id, first, last in spans:
+            if service_id not in active or not first <= rel <= last:
+                continue
+            rows = db.trip_stop_times(tix)
+            eff, _ = effective_times(slug, rows, d, None)
+            trip = {"tix": tix, "shape_id": shape_id}
+            geom = shape_geom(db, shape_id)
+            pos = _interp(eff, now, stop_distances(db, trip, rows) if geom else None, geom)
+            # long-distance lines (Alsa, Renfe) run far outside: only draw the part inside Euskal Herria
+            if not pos or not region.contains(pos[0], pos[1]):
+                continue
+            li = line_info(db, route_id)
+            out.append({
+                "id": "%s:sched:%s:%s" % (slug, tid, d.strftime("%Y%m%d")), "agency": slug, "agency_name": info["name"],
+                "label": "", "lat": round(pos[0], 6), "lon": round(pos[1], 6),
+                "bearing": round(pos[4]) if pos[4] is not None else None, "on_track": pos[5], "speed": None,
+                "route_id": route_id, "line": li["line"], "color": li["color"], "text_color": li["text_color"],
+                "mode": li["mode"], "headsign": headsign or lb_headsign(slug, tix) or li["long"],
+                "trip_id": tid, "date": d.strftime("%Y%m%d"), "stop": pos[2],
+                "status": 1 if pos[3] == "stopped" else 2, "ts": None, "delay": None,
+                "est": False, "sched": True, "kind": "sched", "occupancy": None})
     return out
 
 

@@ -103,6 +103,11 @@ index (`data-index.json`) reports a newer timetable. Real-time `.pb` feeds are f
 - Many operators publish empty feeds (15-byte files). The UI shows "scheduled" for those.
 - Euskotren publishes trip updates but no vehicle positions: train positions are estimated from
   the trip updates and shown with a dashed outline.
+- Vehicles on the map come in three kinds (`kind` in `/api/vehicles`), most to least eye-catching:
+  `gps` (real position from the operator: solid pill with a coloured ring), `est` (estimated from live
+  arrival data, Euskotren / Lurraldebus / Txik Txak: dashed outline) and `sched` (operator without any live data,
+  e.g. Villavesas or Navarra interurban: position computed from the timetable only, drawn faded with a dotted
+  outline below the others; zoomed out, the count bubbles include every kind alike). Each kind can be shown or hidden in the Filters tab.
 - AlavaBus encodes entity timestamps as local time; `LOCAL_EPOCH` in `core.py` corrects this.
 - The Renfe feeds cover all of Spain; see "Limited to Euskal Herria" below.
 
