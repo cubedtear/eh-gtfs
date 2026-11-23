@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Mugitu",
   "short_name": "Mugitu",
-  "description": "Live map and next departures for buses, trains, metro and trams in Euskal Herria.",
+  "description": "Autobus, tren, metro eta tranbien posizioak eta hurrengo irteerak zuzenean Euskal Herri osoan, datu irekietatik.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",

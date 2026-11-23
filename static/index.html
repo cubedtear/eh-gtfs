@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="eu">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Mugitu: live buses, trains and metro in Euskal Herria</title>
-<meta name="description" content="Live positions and next departures for buses, trains, metro and trams across Euskal Herria: Euskadi, Nafarroa and Ipar Euskal Herria, from open data.">
+<title>Mugitu: Euskal Herriko garraio publikoa zuzenean</title>
+<meta name="description" content="Autobus, tren, metro eta tranbien posizioak eta hurrengo irteerak zuzenean Euskal Herri osoan, datu irekietatik.">
 <meta name="color-scheme" content="light dark">
 <script>/* set the theme before first paint */(function(){var d=document.documentElement;try{d.dataset.theme=localStorage.getItem("theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")}catch(e){d.dataset.theme="light"}})()</script>
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
@@ -55,10 +55,10 @@
 <main id="layout">
   <section id="panel">
     <nav id="tabs" aria-label="Sections">
-      <button type="button" data-tab="stops" data-ic="pin" class="active" aria-current="page"><span class="tab-ic"></span><span data-i18n="tab_stops">Stops</span></button>
-      <button type="button" data-tab="lines" data-ic="route"><span class="tab-ic"></span><span data-i18n="tab_lines">Lines</span></button>
-      <button type="button" data-tab="alerts" data-ic="warn"><span class="tab-ic"></span><span data-i18n="tab_alerts">Alerts</span><span id="alert-count" class="badge" hidden></span></button>
-      <button type="button" data-tab="live" data-ic="tune"><span class="tab-ic"></span><span data-i18n="tab_live">Filters</span></button>
+      <button type="button" data-tab="stops" data-ic="pin" class="active" aria-current="page"><span class="tab-ic"></span><span data-i18n="tab_stops">Geltokiak</span></button>
+      <button type="button" data-tab="lines" data-ic="route"><span class="tab-ic"></span><span data-i18n="tab_lines">Lineak</span></button>
+      <button type="button" data-tab="alerts" data-ic="warn"><span class="tab-ic"></span><span data-i18n="tab_alerts">Abisuak</span><span id="alert-count" class="badge" hidden></span></button>
+      <button type="button" data-tab="live" data-ic="tune"><span class="tab-ic"></span><span data-i18n="tab_live">Iragazkiak</span></button>
       <button type="button" data-tab="info" data-ic="info"><span class="tab-ic"></span><span data-i18n="tab_info">Info</span></button>
     </nav>
     <div id="sheet" data-state="half">

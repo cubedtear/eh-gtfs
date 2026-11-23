@@ -58,9 +58,14 @@ const CLUSTER_PX = 76;        // size of the grid cell of a vehicle bubble, in s
 
 /** Languages in the order shown in the selectors: Euskara, Español, Français, English. */
 const LANGS = [['eu', 'Euskara'], ['es', 'Español'], ['fr', 'Français'], ['en', 'English']];
+/** Everybody starts in Basque, whatever the language of their browser. Only a language the user picks is remembered
+ *  (under its own key: the old 'lang' key also held languages that were merely detected, so it is ignored and removed). */
+const DEFAULT_LANG = 'eu';
+const LANG_KEY = 'langChoice';
+localStorage.removeItem('lang');
 
 const S = {
-  lang: localStorage.getItem('lang') || (navigator.language || 'en').slice(0, 2),
+  lang: localStorage.getItem(LANG_KEY) || DEFAULT_LANG,
   tab: 'stops',
   view: { name: 'home' },
   hist: [],
@@ -79,7 +84,7 @@ const S = {
   routesCache: {},
   mapStyle: localStorage.getItem('mapStyle') === 'detailed' ? 'detailed' : 'simple',
 };
-if (!I18N[S.lang]) S.lang = 'en';
+if (!I18N[S.lang]) S.lang = DEFAULT_LANG;
 try {
   const f = JSON.parse(localStorage.getItem('filters2') || 'null');
   if (f) {
@@ -1131,8 +1136,9 @@ function pickSuggestion(s) {
 }
 
 // ───────────────────────────────────────────────────────────── language + theme
-function setLang(code) {
-  S.lang = I18N[code] ? code : 'en'; localStorage.setItem('lang', S.lang);
+function setLang(code, remember) {
+  S.lang = I18N[code] ? code : DEFAULT_LANG;
+  if (remember) localStorage.setItem(LANG_KEY, S.lang);
   const nm = Object.fromEntries(LANGS)[S.lang];
   $('#btn-lang').setAttribute('aria-label', t('language') + ': ' + nm); $('#btn-lang').title = t('language');
   $$('#lang-menu [data-lang]').forEach(b => b.setAttribute('aria-checked', b.dataset.lang === S.lang));
@@ -1214,7 +1220,7 @@ document.addEventListener('click', ev => {
     case 'clear-line': S.filters.line = null; filtersChanged(); if (S.view.name === 'route') render(); break;
     case 'clear-agency': S.filters.agencies.delete(d.id); if (!S.filters.agencies.size) S.filters.agencies = null; filtersChanged(); break;
     case 'mode': toggleMode(d.mode); filtersChanged(); break;
-    case 'lang': setLang(d.lang); closeLangMenu(); break;
+    case 'lang': setLang(d.lang, true); closeLangMenu(); break;
     case 'mapstyle': S.mapStyle = d.style; localStorage.setItem('mapStyle', d.style); applyBasemap(); renderLive(); break;
     case 'install': if (deferredInstall) { deferredInstall.prompt(); deferredInstall.userChoice.finally(() => { deferredInstall = null; if (S.view.name === 'info') render(); }); } break;
     case 'ag-all': S.filters.agencies = null; filtersChanged(); break;
